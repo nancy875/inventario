@@ -1568,71 +1568,116 @@ function updateFbStatusIndicators(){
 
 // Conexión automática a Firebase al iniciar sesión
 // No depende del formulario — usa fbCfg hardcodeado directamente
-// Carga datos desde Firebase y activa listeners en tiempo real
-function fbCargarYEscuchar(){
-  if(!window._fbReady || _fbListenersActive) return;
-  updateFbStatusUI('activo');
-  window._fbGet(window._ref(window._db,'proesa'))
-    .then(function(snap){
-      var val = snap.val();
-      if(val){
-        if(val.hw){hwData=Array.isArray(val.hw)?val.hw:Object.values(val.hw); localStorage.setItem(KEYS.hw,JSON.stringify(hwData));}
-        if(val.sw){swData=Array.isArray(val.sw)?val.sw:Object.values(val.sw); localStorage.setItem(KEYS.sw,JSON.stringify(swData));}
-        if(val.ar){arData=Array.isArray(val.ar)?val.ar:Object.values(val.ar); localStorage.setItem(KEYS.ar,JSON.stringify(arData));}
-        if(val.sv){svData=Array.isArray(val.sv)?val.sv:Object.values(val.sv); localStorage.setItem(KEYS.sv,JSON.stringify(svData));}
-        if(val.rb){rbData=Array.isArray(val.rb)?val.rb:Object.values(val.rb); localStorage.setItem(KEYS.rb,JSON.stringify(rbData));}
-        if(val.imp){impData=Array.isArray(val.imp)?val.imp:Object.values(val.imp); localStorage.setItem(KEYS.imp,JSON.stringify(impData));}
-      } else {
-        fbSaveAll(); // Primera vez: subir datos locales
+// ── FIREBASE REST API — funciona sin SDK en cualquier dispositivo ──────────
+var FB_DB_URL = 'https://proesa-inventario-default-rtdb.firebaseio.com';
+var _fbSyncInterval = null;
+var _fbLastSync = 0;
+
+// Leer datos de Firebase vía REST
+function fbRestGet(path){
+  return fetch(FB_DB_URL + path + '.json')
+    .then(function(r){ return r.json(); })
+    .catch(function(e){ console.error('fbRestGet error:', e); return null; });
+}
+
+// Escribir datos en Firebase vía REST
+function fbRestSet(path, data){
+  return fetch(FB_DB_URL + path + '.json', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  }).catch(function(e){ console.error('fbRestSet error:', e); });
+}
+
+// Cargar datos desde Firebase REST y actualizar UI
+function fbCargarDatos(){
+  return fbRestGet('/proesa')
+    .then(function(val){
+      if(!val){
+        // Primera vez — subir datos locales
+        return fbSubirTodos();
       }
-      fbStartListeners();
-      // Re-renderizar con datos frescos
-      try{renderMetrics();}catch(e){}
-      try{renderHW();}catch(e){}
-      try{renderFinancialSummary();}catch(e){}
-      try{checkAlertBanner();}catch(e){}
-      try{autoActualizarStatus();}catch(e){}
-      showSyncNotif('🔄 Sincronizado con Firebase');
+      var cambios = false;
+      if(val.hw){ hwData=Array.isArray(val.hw)?val.hw:Object.values(val.hw); localStorage.setItem(KEYS.hw,JSON.stringify(hwData)); cambios=true; }
+      if(val.sw){ swData=Array.isArray(val.sw)?val.sw:Object.values(val.sw); localStorage.setItem(KEYS.sw,JSON.stringify(swData)); cambios=true; }
+      if(val.ar){ arData=Array.isArray(val.ar)?val.ar:Object.values(val.ar); localStorage.setItem(KEYS.ar,JSON.stringify(arData)); cambios=true; }
+      if(val.sv){ svData=Array.isArray(val.sv)?val.sv:Object.values(val.sv); localStorage.setItem(KEYS.sv,JSON.stringify(svData)); cambios=true; }
+      if(val.rb){ rbData=Array.isArray(val.rb)?val.rb:Object.values(val.rb); localStorage.setItem(KEYS.rb,JSON.stringify(rbData)); cambios=true; }
+      if(val.imp){ impData=Array.isArray(val.imp)?val.imp:Object.values(val.imp); localStorage.setItem(KEYS.imp,JSON.stringify(impData)); cambios=true; }
+      if(cambios){
+        try{renderMetrics();}catch(e){}
+        try{renderHW();}catch(e){}
+        try{renderFinancialSummary();}catch(e){}
+        try{checkAlertBanner();}catch(e){}
+        try{autoActualizarStatus();}catch(e){}
+      }
+      _fbLastSync = Date.now();
+      updateFbStatusUI('activo');
+      showSyncNotif('🔄 Sincronizado');
     })
-    .catch(function(err){
-      console.error('Firebase carga error:', err);
+    .catch(function(e){
+      console.error('fbCargarDatos error:', e);
       updateFbStatusUI('offline');
-      // Reintentar en 5 segundos
-      setTimeout(function(){ if(!_fbListenersActive) fbCargarYEscuchar(); }, 5000);
     });
 }
 
+// Subir todos los datos locales a Firebase
+function fbSubirTodos(){
+  var data = {
+    hw: hwData, sw: swData, ar: arData,
+    sv: svData, rb: rbData, imp: impData
+  };
+  return fbRestSet('/proesa', data)
+    .then(function(){
+      updateFbStatusUI('activo');
+      showSyncNotif('☁️ Datos subidos a Firebase');
+    });
+}
+
+// Polling: revisar cambios cada 10 segundos
+function fbIniciarPolling(){
+  if(_fbSyncInterval) clearInterval(_fbSyncInterval);
+  fbCargarDatos(); // Carga inicial inmediata
+  _fbSyncInterval = setInterval(function(){
+    if(navigator.onLine) fbCargarDatos();
+  }, 10000); // Cada 10 segundos
+  console.log('Firebase REST polling activo — sincroniza cada 10s');
+}
+
+// Punto de entrada principal — reemplaza fbAutoConectar
 function fbAutoConectar(){
-  if(!fbCfg.apiKey || !fbCfg.databaseURL) return;
-  // Si ya está listo, cargar datos directamente
-  if(window._fbReady){
-    if(!_fbListenersActive) fbCargarYEscuchar();
+  if(!navigator.onLine){
+    updateFbStatusUI('offline');
+    // Reintentar cuando haya conexión
+    window.addEventListener('online', function onOnline(){
+      window.removeEventListener('online', onOnline);
+      fbIniciarPolling();
+    });
     return;
   }
-  // Inicializar SDK y esperar
-  // Mostrar que está intentando conectar
   updateFbStatusUI('conectando');
-  try{
-    window._fbInit(fbCfg);
-    var intentos = 0;
-    var esperar = setInterval(function(){
-      intentos++;
-      if(window._fbReady){
-        clearInterval(esperar);
-        fbCargarYEscuchar();
-      } else if(intentos > 40){ // 20 segundos — suficiente para móvil lento
-        clearInterval(esperar);
-        console.warn('Firebase SDK timeout — reintentando en 15s');
-        updateFbStatusUI('offline');
-        setTimeout(fbAutoConectar, 15000);
-      }
-    }, 500);
-  }catch(e){
-    console.error('fbAutoConectar error:', e);
-    updateFbStatusUI('offline');
-    setTimeout(fbAutoConectar, 10000);
-  }
+  fbIniciarPolling();
 }
+
+// Reemplaza fbCargarYEscuchar (compatibilidad)
+function fbCargarYEscuchar(){
+  fbAutoConectar();
+}
+
+// Reemplaza fbWrite — escribe directamente vía REST
+function fbWrite(path, data){
+  if(!navigator.onLine) return;
+  fbRestSet('/proesa/' + path, data);
+}
+
+// Reemplaza fbSaveAll
+function fbSaveAll(){
+  fbSubirTodos().then(function(){
+    var st = document.getElementById('fbStatus');
+    if(st) st.textContent = '✅ Datos subidos correctamente';
+  });
+}
+
 
 function activarFirebase(){
   saveFbCfg();
