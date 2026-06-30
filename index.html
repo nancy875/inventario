@@ -3068,114 +3068,60 @@ function renderMetrics(){
   document.getElementById('metricsBar').innerHTML=`
 
     <div class="metric-card bl-accent" onclick="toggleMetricDetail('detail-sv')" style="cursor:pointer">
-      <div class="m-label">⚡ Servicios ▾</div><div class="m-value">$${fmt(svTotal)}</div><div class="m-sub">clic para ver detalle</div>
-    </div>
-
-    <div class="metric-card" style="border-left:3px solid var(--purple);cursor:pointer" onclick="switchTab('nomina',document.querySelector('.tab-btn[onclick*=nomina]'))">
-      <div class="m-label" style="color:var(--purple)">💼 Nómina ▸</div>
-      <div class="m-value">$${fmt(nmMensualMetric)}</div>
-      <div class="m-sub">clic para ver detalle</div>
+      <div class="m-label">⚡ Servicios ▾</div><div class="m-value">$\${fmt(svTotal)}</div><div class="m-sub">clic para ver detalle</div>
     </div>
 
     <div class="metric-card bl-success" onclick="toggleMetricDetail('detail-renta')" style="cursor:pointer">
-      <div class="m-label">🏢 Arrendamiento ▾</div><div class="m-value">$${fmt(rentaTotalConRecargos)}</div><div class="m-sub">clic para ver detalle</div>
+      <div class="m-label">🏢 Arrendamiento ▾</div><div class="m-value">$\${fmt(rentaTotalConRecargos)}</div><div class="m-sub">clic para ver detalle</div>
     </div>
 
     <div class="metric-card bl-success" onclick="toggleMetricDetail('detail-cobrar')" style="cursor:pointer">
       <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3);letter-spacing:.5px;margin-bottom:2px">Reembolsos</div>
-      <div class="m-label">💰 Por cobrar ▾</div><div class="m-value" style="color:var(--green)">$${fmt(depósitoPendiente)}</div><div class="m-sub">clic para ver detalle</div>
+      <div class="m-label">💰 Por cobrar ▾</div><div class="m-value" style="color:var(--green)">$\${fmt(depósitoPendiente)}</div><div class="m-sub">clic para ver detalle</div>
     </div>
 
     <div class="metric-card bl-danger" onclick="toggleMetricDetail('detail-pagar')" style="cursor:pointer">
       <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3);letter-spacing:.5px;margin-bottom:2px">Reembolsos</div>
-      <div class="m-label">💸 Por pagar ▾</div><div class="m-value" style="color:var(--red)">$${fmt(rbCargoMetric)}</div><div class="m-sub">clic para ver detalle</div>
+      <div class="m-label">💸 Por pagar ▾</div><div class="m-value" style="color:var(--red)">$\${fmt(rbCargoMetric)}</div><div class="m-sub">clic para ver detalle</div>
     </div>
 
     <div class="metric-card" style="border-left:4px solid var(--red);background:var(--red-bg);cursor:pointer" onclick="toggleMetricDetail('detail-vencidos')">
-      <div class="m-label" style="color:var(--red)">🚨 Vencidos ▾</div><div class="m-value" style="color:var(--red)">${vencidos}</div><div class="m-sub" style="color:var(--red)">${vencidos>0?'requieren atención':'Sin vencidos ✓'}</div>
+      <div class="m-label" style="color:var(--red)">🚨 Vencidos ▾</div><div class="m-value" style="color:var(--red)">\${vencidos}</div><div class="m-sub" style="color:var(--red)">\${vencidos>0?'requieren atención':'Sin vencidos ✓'}</div>
     </div>
 
     <div class="metric-card" style="border-left:4px solid #d97706;background:var(--amber-bg);cursor:pointer" onclick="toggleMetricDetail('detail-vencer')">
-      <div class="m-label" style="color:var(--amber)">⏰ Por vencer ▾</div><div class="m-value" style="color:var(--amber)">${_cntPorVencer}</div><div class="m-sub" style="color:var(--amber)">próximos 7 días</div>
+      <div class="m-label" style="color:var(--amber)">⏰ Por vencer ▾</div><div class="m-value" style="color:var(--amber)">\${_cntPorVencer}</div><div class="m-sub" style="color:var(--amber)">próximos 7 días</div>
+    </div>
+
+    <div class="metric-card" style="border-left:3px solid var(--purple);cursor:pointer" onclick="switchTab('nomina',document.querySelector('.tab-btn[onclick*=nomina]'))">
+      <div class="m-label" style="color:var(--purple)">💼 Nómina ▸</div>
+      <div class="m-value">$\${fmt(nmMensualMetric)}</div>
+      <div class="m-sub">clic para ver detalle</div>
     </div>
 
     <div class="metric-card bl-purple" onclick="toggleMetricDetail('detail-imp')" style="cursor:pointer">
-      <div class="m-label">🧾 Impuestos ▾</div><div class="m-value">$${fmt(_impTotal)}</div><div class="m-sub">clic para ver detalle</div>
+      <div class="m-label">🧾 Impuestos ▾</div><div class="m-value">$\${fmt(_impTotal)}</div><div class="m-sub">clic para ver detalle</div>
     </div>
 
-    <div class="metric-card" style="grid-column:span 1;border-left:4px solid var(--accent);background:linear-gradient(135deg,#e8eef8 0%,#f5f8ff 60%,var(--surface) 100%);display:flex;flex-direction:column;justify-content:center;padding:12px 16px;cursor:pointer;min-height:88px" onclick="toggleMetricDetail('detail-total')">
+    <div class="metric-card" style="grid-column:span 2;border-left:4px solid var(--accent);background:linear-gradient(135deg,#e8eef8 0%,#f5f8ff 60%,var(--surface) 100%);display:flex;flex-direction:column;justify-content:center;padding:16px 20px;cursor:pointer;min-height:88px" onclick="toggleMetricDetail('detail-total')">
       <div class="m-label" style="color:var(--accent);font-weight:700;font-size:11px;margin-bottom:4px">📊 TOTAL MENSUAL COMPROMETIDO ▾</div>
-      <div style="font-size:32px;font-weight:800;font-family:monospace;color:var(--accent);line-height:1">${fmt(rentaTotalConRecargos+svTotal+swTotal+_impTotal)}</div>
+      <div style="font-size:42px;font-weight:800;font-family:monospace;color:var(--accent);line-height:1">\${fmt(rentaTotalConRecargos+svTotal+swTotal+_impTotal+nmMensualMetric)}</div>
       <div style="font-size:11px;color:var(--accent);opacity:.7;margin-top:5px">MXN / mes · pagos fijos · clic para desglose</div>
     </div>
 
     <div class="metric-card bl-accent">
-      <div class="m-label">🖥 Hardware</div><div class="m-value">${totalBienes}</div><div class="m-sub">bienes registrados</div>
+      <div class="m-label">🖥 Hardware</div><div class="m-value">\${totalBienes}</div><div class="m-sub">bienes registrados</div>
     </div>
 
     <div class="metric-card bl-warn">
-      <div class="m-label">⚠ Sin resguardatario</div><div class="m-value">${sinResguard}</div><div class="m-sub">requieren asignación</div>
+      <div class="m-label">⚠ Sin resguardatario</div><div class="m-value">\${sinResguard}</div><div class="m-sub">requieren asignación</div>
     </div>
 
     <div class="metric-card bl-purple" onclick="toggleMetricDetail('detail-sw')" style="cursor:pointer">
-      <div class="m-label">💿 Software ▾</div><div class="m-value">$${fmt(swTotal)}</div><div class="m-sub">clic para ver detalle</div>
+      <div class="m-label">💿 Software ▾</div><div class="m-value">$\${fmt(swTotal)}</div><div class="m-sub">clic para ver detalle</div>
     </div>
 
-
-
-    <div class="metric-card" style="border-left:4px solid #f59e0b;background:var(--surface);grid-column:1/-1;padding:14px 18px">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#b45309;margin-bottom:12px;letter-spacing:.5px">📦 Almacén — Control de inventario</div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-
-        <div onclick="almAbrirDetalle('papeleria')" style="flex:1;min-width:180px;cursor:pointer;border:2px solid #e0e7ff;border-radius:10px;padding:12px 16px;background:#f5f3ff"
-          onmouseover="this.style.borderColor='#6366f1';this.style.background='#eef2ff'"
-          onmouseout="this.style.borderColor='#e0e7ff';this.style.background='#f5f3ff'">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:13px;font-weight:700;color:#4338ca">📄 Papelería</span>
-            <span style="font-size:11px;color:#6366f1;font-weight:600">Ver ▾</span>
-          </div>
-          <div style="font-size:11px;color:#6366f1;margin-top:4px">${(almData&&almData.productos||[]).length} producto${(almData&&almData.productos||[]).length!==1?'s':''}</div>
-        </div>
-
-        <div onclick="almAbrirDetalle('marketing')" style="flex:1;min-width:180px;cursor:pointer;border:2px solid #dbeafe;border-radius:10px;padding:12px 16px;background:#eff6ff"
-          onmouseover="this.style.borderColor='var(--accent)';this.style.background='#dbeafe'"
-          onmouseout="this.style.borderColor='#dbeafe';this.style.background='#eff6ff'">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:13px;font-weight:700;color:var(--accent)">🎯 Marketing</span>
-            <span style="font-size:11px;color:var(--accent);font-weight:600">Ver ▾</span>
-          </div>
-          <div style="font-size:11px;color:var(--accent);margin-top:4px">${(almData&&almData.mktProductos||[]).length} producto${(almData&&almData.mktProductos||[]).length!==1?'s':''}</div>
-        </div>
-
-        <div onclick="almAbrirDetalle('limpieza')" style="flex:1;min-width:180px;cursor:pointer;border:2px solid #cffafe;border-radius:10px;padding:12px 16px;background:#ecfeff"
-          onmouseover="this.style.borderColor='#0891b2';this.style.background='#cffafe'"
-          onmouseout="this.style.borderColor='#cffafe';this.style.background='#ecfeff'">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:13px;font-weight:700;color:#0369a1">🧹 Limpieza</span>
-            <span style="font-size:11px;color:#0891b2;font-weight:600">Ver ▾</span>
-          </div>
-          <div style="font-size:11px;color:#0369a1;margin-top:4px">${(almData&&almData.limpProductos||[]).length} producto${(almData&&almData.limpProductos||[]).length!==1?'s':''}</div>
-        </div>
-
-      </div>
-    </div>
-<!-- ── PANELES DESPLEGABLES ──────────────────────────────── -->
-
-    <!-- Software -->
-    <div id="detail-sw" style="display:none;grid-column:1/-1;background:var(--surface2);border-top:2px solid var(--purple);padding:14px 20px">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--purple);margin-bottom:10px">💿 Software / Licencias</div>
-      <div style="display:flex;flex-wrap:wrap;gap:10px">
-        ${swData.filter(s=>(s.costoMensual||0)>0&&s.status!=='pagado'&&s.status!=='en tiempo').map(s=>`
-          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;min-width:180px">
-            <div style="font-size:12px;font-weight:600">${s.nombre}</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px">${s.proveedor||''} · ${s.pago||''}</div>
-            <div style="font-size:15px;font-weight:700;font-family:monospace;color:var(--purple);margin-top:4px">$${fmt(s.costoMensual||0)}<span style="font-size:10px;font-weight:400;color:var(--text3)">/mes</span></div>
-            <div style="font-size:10px;margin-top:3px;color:${s.status==='pagado'?'var(--green)':'var(--amber)'}">${s.status}</div>
-          </div>`).join('')||'<span style="font-size:12px;color:var(--text3)">Sin software registrado</span>'}
-      </div>
-    </div>
-
-    <!-- Servicios -->
+        <!-- Servicios -->
     <div id="detail-sv" style="display:none;grid-column:1/-1;background:var(--surface2);border-top:2px solid var(--accent);padding:14px 20px">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--accent);margin-bottom:10px">⚡ Servicios pendientes</div>
       <div style="display:flex;flex-wrap:wrap;gap:10px">
