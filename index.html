@@ -2755,8 +2755,16 @@ function renderFinancialSummary(){
   var _impPendFS = impData ? impData.filter(function(x){ return x.status !== 'pagado'; }) : [];
   var _impTotalFS = _impPendFS.reduce(function(s,x){ return s+(parseFloat(x.monto)||0); }, 0);
 
-  const totalMensual=rentaMensual+recargosTotal+svMensualReal+svBimestral+swMensual+rbTotCargo+_impTotalFS;
-  const hayPendientes=rentaPendiente.length>0||recargosTotal>0||swMensual>0||svMensualReal>0||rbTotCargo>0||_impTotalFS>0;
+  // Nómina pendiente
+  const nmMensual=nmData.filter(function(e){ return e.statusPago!=='pagado'; }).reduce(function(s,e){
+    var m = e.montoTotal||0;
+    var frec=(e.frecuencia||'Mensual').toLowerCase();
+    if(frec==='quincenal') return s+(m*2);
+    if(frec==='semanal') return s+(m*4);
+    return s+m; // mensual
+  },0);
+  const totalMensual=rentaMensual+recargosTotal+svMensualReal+svBimestral+swMensual+rbTotCargo+_impTotalFS+nmMensual;
+  const hayPendientes=rentaPendiente.length>0||recargosTotal>0||swMensual>0||svMensualReal>0||rbTotCargo>0||_impTotalFS>0||nmMensual>0;
 
   document.getElementById('financialSummary').innerHTML='';
 }
@@ -3030,6 +3038,9 @@ function renderMetrics(){
   const vencidos=_cntVencidos;
   // Calcular svTotal para métricas
   const svTotal=svData.filter(s=>s.statusPago!=='pagado'&&s.statusPago!=='en tiempo').reduce((s,v)=>s+(v.monto||0),0);
+  // Nómina total pendiente
+  const nmMensualMetric=nmData.filter(function(e){ return e.statusPago!=='pagado'; }).reduce(function(s,e){ return s+(e.montoTotal||0); },0);
+  const nmVencidos=nmData.filter(function(e){ return e.statusPago!=='pagado'&&e.fechalimite&&daysTo(parseDate(e.fechalimite))<0; });
   // Calcular vencidos detalle
   const svVencidos=svData.filter(s=>s.fechalimite&&s.statusPago!=='pagado'&&s.statusPago!=='en tiempo'&&daysTo(parseDate(s.fechalimite))<0);
   // Por vencer en 5 días (sin contar ya vencidos ni pagados)
@@ -3056,6 +3067,12 @@ function renderMetrics(){
 
     <div class="metric-card bl-accent" onclick="toggleMetricDetail('detail-sv')" style="cursor:pointer">
       <div class="m-label">⚡ Servicios ▾</div><div class="m-value">$${fmt(svTotal)}</div><div class="m-sub">clic para ver detalle</div>
+    </div>
+
+    <div class="metric-card" style="border-left:3px solid var(--purple);cursor:pointer" onclick="switchTab('nomina',document.querySelector('.tab-btn[onclick*=nomina]'))">
+      <div class="m-label" style="color:var(--purple)">💼 Nómina ▸</div>
+      <div class="m-value">$${fmt(nmMensualMetric)}</div>
+      <div class="m-sub">clic para ver detalle</div>
     </div>
 
     <div class="metric-card bl-success" onclick="toggleMetricDetail('detail-renta')" style="cursor:pointer">
@@ -3176,7 +3193,8 @@ function renderMetrics(){
       <div style="display:flex;flex-wrap:wrap;gap:10px">
         ${[...svVencidos.map(s=>({tipo:'⚡ Servicio',nombre:s.servicio+(s.concepto?' — '+s.concepto:''),fecha:s.fechalimite,monto:s.monto||0,color:'var(--red)'})),
            ...swVencidos.map(s=>({tipo:'💿 Software',nombre:s.nombre,fecha:s.vence,monto:s.costoMensual||s.costo||0,color:'var(--red)'})),
-           ...arVencidos.map(a=>({tipo:'🏢 Arrendamiento',nombre:a.renta,fecha:a.fechaPagoMensual||a.vence,monto:a.monto||0,color:'var(--red)'}))
+           ...arVencidos.map(a=>({tipo:'🏢 Arrendamiento',nombre:a.renta,fecha:a.fechaPagoMensual||a.vence,monto:a.monto||0,color:'var(--red)'})),
+           ...nmVencidos.map(function(e){ return {tipo:'💼 Nómina',nombre:e.nombre,fecha:e.fechalimite,monto:e.montoTotal||0,color:'var(--purple)'}; })
           ].map(v=>`
           <div style="background:var(--surface);border:1px solid #f5c6c2;border-radius:8px;padding:10px 14px;min-width:200px;border-left:3px solid var(--red)">
             <div style="font-size:10px;color:var(--red);font-weight:600;text-transform:uppercase">${v.tipo}</div>
@@ -4214,7 +4232,7 @@ function renderStrategy(){
 // ══════════════════════════════════════════════
 const tabMap={'hardware':()=>{},'software':renderSW,'arrendamiento':renderAR,'servicios':renderSV,'nomina':renderNM,'resguardatarios':renderResguardatarios,'alertas':renderAlertas,'estrategia':renderStrategy,'reembolsos':function(){renderReembolsos();renderDocsRB();},'finanzas':renderFinanzas,'impuestos':renderIMP,'almacen':function(){try{renderAlmInventario();}catch(e){}}};
 function switchTab(id,btn){
-  ['hardware','software','arrendamiento','servicios','resguardatarios','alertas','estrategia','reembolsos','finanzas','impuestos','almacen'].forEach(t=>{const el=document.getElementById('tab-'+t);if(el)el.style.display=t===id?'block':'none';});
+  ['hardware','software','arrendamiento','servicios','nomina','resguardatarios','alertas','estrategia','reembolsos','finanzas','impuestos','almacen'].forEach(t=>{const el=document.getElementById('tab-'+t);if(el)el.style.display=t===id?'block':'none';});
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   const addBtn=document.getElementById('btnAgregar');
