@@ -564,7 +564,7 @@ window.onerror = function(msg, src, line, col, err){
             <th style="padding:10px 12px;text-align:left">FRECUENCIA</th>
             <th style="padding:10px 12px;text-align:right">MONTO TOTAL</th>
             <th style="padding:10px 12px;text-align:right">MONTO PAGADO</th>
-            <th style="padding:10px 12px;text-align:left">DÍA DE PAGO</th>
+            <th style="padding:10px 12px;text-align:left">FECHA LÍMITE</th>
             <th style="padding:10px 12px;text-align:left">STATUS</th>
             <th style="padding:10px 12px;text-align:left">ACC.</th>
           </tr>
@@ -574,7 +574,7 @@ window.onerror = function(msg, src, line, col, err){
     </div>
   </div>
 
-  <!-- ══════════════ MODAL NÓMINA ══════════════ -->
+  <!-- MODAL NÓMINA -->
   <div class="modal-overlay" id="nmModal">
     <div class="modal" style="max-width:600px">
       <div class="modal-header">
@@ -583,8 +583,14 @@ window.onerror = function(msg, src, line, col, err){
       </div>
       <div class="modal-body">
         <div class="form-grid">
-          <div class="form-group"><label>Nombre del empleado *</label><input type="text" id="nm-nombre" placeholder="Nombre completo"></div>
-          <div class="form-group"><label>Puesto</label><input type="text" id="nm-puesto" placeholder="Ej. Analista, Director..."></div>
+          <div class="form-group">
+            <label>Nombre del empleado *</label>
+            <input type="text" id="nm-nombre" placeholder="Nombre completo">
+          </div>
+          <div class="form-group">
+            <label>Puesto</label>
+            <input type="text" id="nm-puesto" placeholder="Ej. Analista, Director...">
+          </div>
           <div class="form-group">
             <label>Frecuencia de pago</label>
             <select class="form-sel" id="nm-frecuencia">
@@ -593,9 +599,18 @@ window.onerror = function(msg, src, line, col, err){
               <option value="Semanal">Semanal</option>
             </select>
           </div>
-          <div class="form-group"><label>Monto total ($)</label><input type="number" id="nm-montoTotal" placeholder="0.00"></div>
-          <div class="form-group"><label>Día de pago</label><input type="number" id="nm-diaPago" min="1" max="31" placeholder="Ej. 15, 30..."></div>
-          <div class="form-group"><label>Fecha límite</label><input type="date" id="nm-fechalimite"></div>
+          <div class="form-group">
+            <label>Monto total ($)</label>
+            <input type="number" id="nm-montoTotal" placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label>Día de pago</label>
+            <input type="number" id="nm-diaPago" min="1" max="31" placeholder="Ej. 15, 30...">
+          </div>
+          <div class="form-group">
+            <label>Fecha límite</label>
+            <input type="date" id="nm-fechalimite">
+          </div>
         </div>
         <div style="margin-top:16px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
