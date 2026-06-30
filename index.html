@@ -3045,6 +3045,13 @@ function renderMetrics(){
     var d=parseDate(e.fechalimite),n=daysTo(d);
     if(n!==null&&n<0) _cntVencidos++;
   });
+  // Impuestos: fecha límite vencida y no pagado
+  (impData||[]).forEach(function(i){
+    if(i.status==='pagado') return;
+    if(!i.fechalimite) return;
+    var d=parseDate(i.fechalimite),n=daysTo(d);
+    if(n!==null&&n<0) _cntVencidos++;
+  });
   const vencidos=_cntVencidos;
   // Calcular svTotal para métricas
   const svTotal=svData.filter(s=>s.statusPago!=='pagado'&&s.statusPago!=='en tiempo').reduce((s,v)=>s+(v.monto||0),0);
@@ -3146,7 +3153,8 @@ function renderMetrics(){
         ${[...svVencidos.map(s=>({tipo:'⚡ Servicio',nombre:s.servicio+(s.concepto?' — '+s.concepto:''),fecha:s.fechalimite,monto:s.monto||0,color:'var(--red)'})),
            ...swVencidos.map(s=>({tipo:'💿 Software',nombre:s.nombre,fecha:s.vence,monto:s.costoMensual||s.costo||0,color:'var(--red)'})),
            ...arVencidos.map(a=>({tipo:'🏢 Arrendamiento',nombre:a.renta,fecha:a.fechaPagoMensual||a.vence,monto:a.monto||0,color:'var(--red)'})),
-           ...nmVencidos.map(function(e){ return {tipo:'💼 Nómina',nombre:e.nombre,fecha:e.fechalimite,monto:e.montoTotal||0,color:'var(--purple)'}; })
+           ...nmVencidos.map(function(e){ return {tipo:'💼 Nómina',nombre:e.nombre,fecha:e.fechalimite,monto:e.montoTotal||0,color:'var(--purple)'}; }),
+           ...(impData||[]).filter(function(i){ return i.status!=='pagado'&&i.fechalimite&&daysTo(parseDate(i.fechalimite))<0; }).map(function(i){ return {tipo:'🧾 Impuesto',nombre:i.tipo+(i.concepto?' — '+i.concepto:''),fecha:i.fechalimite,monto:i.monto||0,color:'var(--purple)'}; })
           ].map(v=>`
           <div style="background:var(--surface);border:1px solid #f5c6c2;border-radius:8px;padding:10px 14px;min-width:200px;border-left:3px solid var(--red)">
             <div style="font-size:10px;color:var(--red);font-weight:600;text-transform:uppercase">${v.tipo}</div>
