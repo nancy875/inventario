@@ -2709,9 +2709,7 @@ function renderMetrics(){
   // Métricas separadas: a favor (nos pagan) vs a cargo (pagamos)
   const _rbActivos=rbData.filter(r=>{
     if(r.status==='devuelto'||r.status==='pagado') return false;
-    if(!r.fechaEsperada) return true;
-    const fe=new Date(r.fechaEsperada);
-    return (fe.getFullYear()<_hoyRBM.getFullYear())||(fe.getFullYear()===_hoyRBM.getFullYear()&&fe.getMonth()<=_hoyRBM.getMonth());
+    return true; // Mostrar todos los pendientes sin filtrar por fecha
   });
   const depósitoPendiente=_rbActivos.filter(r=>(r.dirección||'a_favor')==='a_favor').reduce((s,r)=>s+(r.montoTotal||r.monto||0),0);
   const rbCargoMetric=_rbActivos.filter(r=>r.dirección==='a_cargo').reduce((s,r)=>s+(r.montoTotal||r.monto||0),0);
@@ -2755,7 +2753,8 @@ function renderMetrics(){
   });
   const _porVencerSV=svData.filter(s=>s.fechalimite&&s.statusPago!=='pagado'&&s.statusPago!=='en tiempo'&&daysTo(parseDate(s.fechalimite))>=0&&daysTo(parseDate(s.fechalimite))<=_diasAlerta);
   const _porVencerIMP=(impData||[]).filter(i=>i.status!=='pagado'&&i.fechalimite&&daysTo(parseDate(i.fechalimite))>=0&&daysTo(parseDate(i.fechalimite))<=_diasAlerta);
-  const _cntPorVencer=_porVencerSW.length+_porVencerAR.length+_porVencerSV.length+_porVencerIMP.length;
+  const _porVencerRB=rbData.filter(r=>r.status!=='devuelto'&&r.status!=='pagado'&&r.fechaEsperada&&daysTo(parseDate(r.fechaEsperada))>=0&&daysTo(parseDate(r.fechaEsperada))<=_diasAlerta);
+  const _cntPorVencer=_porVencerSW.length+_porVencerAR.length+_porVencerSV.length+_porVencerIMP.length+_porVencerRB.length;
 
   var _impPendMet = impData ? impData.filter(function(x){ return x.status !== 'pagado'; }) : [];
   var _impTotal = _impPendMet.reduce(function(s,x){ return s+(parseFloat(x.monto)||0); }, 0);
