@@ -175,7 +175,7 @@ textarea{resize:vertical;min-height:60px}
 .lgroup label{display:block;font-size:11px;font-weight:600;color:#6b6960;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}
 .linput-wrap{position:relative;}
 .linput-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#9c9b93;pointer-events:none;}
-.linput{width:100%;padding:9px 11px 9px 34px;border:1px solid #e2e0d8;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;color:#1a1916;background:#fff;outline:none;transition:border-color .15s,box-shadow .15s;}
+.linput{width:100%;padding:9px 36px 9px 34px;border:1px solid #e2e0d8;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;color:#1a1916;background:#fff;outline:none;transition:border-color .15s,box-shadow .15s;}
 .linput:focus{border-color:#2a5caa;box-shadow:0 0 0 3px rgba(42,92,170,.1);}
 .leye{position:absolute;right:9px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9c9b93;padding:3px;}
 .leye:hover{color:#6b6960;}
@@ -1609,13 +1609,21 @@ function limpiarEspacio(){
 }
 
 function saveAll(){
-  localStorage.setItem(KEYS.hw,JSON.stringify(hwData));
-  localStorage.setItem(KEYS.sw,JSON.stringify(swData));
-  localStorage.setItem(KEYS.ar,JSON.stringify(arData));
-  localStorage.setItem(KEYS.sv,JSON.stringify(svData));
-  localStorage.setItem(KEYS.rb,JSON.stringify(rbData));
-  localStorage.setItem(KEYS.nm,JSON.stringify(nmData));
-  localStorage.setItem(KEYS.imp,JSON.stringify(impData));
+  try{
+    localStorage.setItem(KEYS.hw,JSON.stringify(hwData));
+    localStorage.setItem(KEYS.sw,JSON.stringify(swData));
+    localStorage.setItem(KEYS.ar,JSON.stringify(arData));
+    localStorage.setItem(KEYS.sv,JSON.stringify(svData));
+    localStorage.setItem(KEYS.rb,JSON.stringify(rbData));
+    localStorage.setItem(KEYS.nm,JSON.stringify(nmData));
+    localStorage.setItem(KEYS.imp,JSON.stringify(impData));
+  }catch(e){
+    // Si falla por espacio, intentar solo los datos críticos
+    try{ localStorage.setItem(KEYS.sv,JSON.stringify(svData)); }catch(e2){}
+    try{ localStorage.setItem(KEYS.nm,JSON.stringify(nmData)); }catch(e2){}
+    try{ localStorage.setItem(KEYS.rb,JSON.stringify(rbData)); }catch(e2){}
+    showNotif('⚠ Espacio limitado. Usa "Liberar espacio" para limpiar comprobantes.','amber');
+  }
   // Sincronizar via Firebase SDK si está activo
   if(window._fbReady && _fbListenersActive){
     try{ fbWrite('hw',hwData); fbWrite('sw',swData); fbWrite('ar',arData);
