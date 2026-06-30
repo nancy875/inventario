@@ -3057,6 +3057,21 @@ function renderMetrics(){
   const svTotal=svData.filter(s=>s.statusPago!=='pagado'&&s.statusPago!=='en tiempo').reduce((s,v)=>s+(v.monto||0),0);
   // Nómina total pendiente
   const nmMensualMetric=nmData.filter(function(e){ return e.statusPago!=='pagado'; }).reduce(function(s,e){ return s+Math.max(0,(e.montoTotal||0)-(e.montoPagado||0)); },0);
+  // Cálculos equivalentes mensuales para el Total Comprometido del header
+  const _svMensualM=svData.filter(s=>s.frecuencia==='Mensual'&&s.statusPago!=='pagado'&&s.statusPago!=='en tiempo').reduce((s,v)=>s+(v.monto||0),0);
+  const _svBimestralM=svData.filter(s=>s.frecuencia==='Bimestral'&&s.statusPago!=='pagado'&&s.statusPago!=='en tiempo').reduce((s,v)=>s+(v.monto||0),0);
+  const _svTrimestralM=svData.filter(s=>s.frecuencia==='Trimestral'&&s.statusPago!=='pagado'&&s.statusPago!=='en tiempo').reduce((s,v)=>s+(v.monto||0),0);
+  const _svSemestralM=svData.filter(s=>s.frecuencia==='Semestral'&&s.statusPago!=='pagado'&&s.statusPago!=='en tiempo').reduce((s,v)=>s+(v.monto||0),0);
+  const _svAnualM=svData.filter(s=>s.frecuencia==='Anual'&&s.statusPago!=='pagado'&&s.statusPago!=='en tiempo').reduce((s,v)=>s+(v.monto||0),0);
+  const _svEquivMensualM=_svMensualM+(_svBimestralM/2)+(_svTrimestralM/3)+(_svSemestralM/6)+(_svAnualM/12);
+  const _swMensualM=swData.filter(s=>s.status!=='pagado'&&s.status!=='en tiempo'&&(s.costoMensual||0)>0).reduce((s,v)=>s+(v.costoMensual||0),0);
+  const _nmEquivMensualM=nmData.filter(function(e){ return e.statusPago!=='pagado'; }).reduce(function(s,e){
+    var m=Math.max(0,(e.montoTotal||0)-(e.montoPagado||0));
+    var f=(e.frecuencia||'Mensual').toLowerCase();
+    return s+(f==='quincenal'?m*2:f==='semanal'?m*4:m);
+  },0);
+  const _impPendM=(impData||[]).filter(function(i){ return i.status!=='pagado'; }).reduce(function(s,i){ return s+(parseFloat(i.monto)||0); },0);
+  const _totalComprometidoM=rentaTotalConRecargos+_svEquivMensualM+_swMensualM+_nmEquivMensualM+_impPendM+rbCargoMetric;
   const nmVencidos=nmData.filter(function(e){ return e.statusPago!=='pagado'&&e.fechalimite&&daysTo(parseDate(e.fechalimite))<0; });
   // Calcular vencidos detalle
   const svVencidos=svData.filter(s=>s.fechalimite&&s.statusPago!=='pagado'&&s.statusPago!=='en tiempo'&&daysTo(parseDate(s.fechalimite))<0);
@@ -3083,7 +3098,7 @@ function renderMetrics(){
   document.getElementById('metricsBar').innerHTML=`
 
     <div class="metric-card bl-accent" onclick="toggleMetricDetail('detail-sv')" style="cursor:pointer">
-      <div class="m-label">⚡ Servicios ▾</div><div class="m-value">${fmt(svTotal)}</div><div class="m-sub">clic para ver detalle</div>
+      <div class="m-label">⚡ Servicios ▾</div><div class="m-value">${fmt(_svEquivMensualM)}</div><div class="m-sub">clic para ver detalle</div>
     </div>
 
     <div class="metric-card bl-success" onclick="toggleMetricDetail('detail-renta')" style="cursor:pointer">
@@ -3120,7 +3135,7 @@ function renderMetrics(){
 
     <div class="metric-card" style="grid-column:span 2;border-left:4px solid var(--accent);background:linear-gradient(135deg,#e8eef8 0%,#f5f8ff 60%,var(--surface) 100%);display:flex;flex-direction:column;justify-content:center;padding:16px 20px;cursor:pointer;min-height:88px" onclick="toggleMetricDetail('detail-total')">
       <div class="m-label" style="color:var(--accent);font-weight:700;font-size:11px;margin-bottom:4px">📊 TOTAL MENSUAL COMPROMETIDO ▾</div>
-      <div style="font-size:42px;font-weight:800;font-family:monospace;color:var(--accent);line-height:1">${fmt(rentaTotalConRecargos+svTotal+swTotal+_impTotal+nmMensualMetric)}</div>
+      <div style="font-size:42px;font-weight:800;font-family:monospace;color:var(--accent);line-height:1">${fmt(_totalComprometidoM)}</div>
       <div style="font-size:11px;color:var(--accent);opacity:.7;margin-top:5px">MXN / mes · pagos fijos · clic para desglose</div>
     </div>
 
