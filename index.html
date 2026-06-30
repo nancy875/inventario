@@ -3566,7 +3566,7 @@ function saveImp(){
     };
     if(idx !== ''){ impData[parseInt(idx)] = imp; } else { impData.push(imp); }
     localStorage.setItem(KEYS.imp, JSON.stringify(impData));
-    fbWrite('imp', impData);
+    try{ fbWrite('imp', impData); }catch(e){}
     autoActualizarStatus(); renderIMP(); renderMetrics(); renderFinancialSummary();
     closeImpModal();
     showNotif('✅ Impuesto guardado','green');
