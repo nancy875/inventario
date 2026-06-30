@@ -306,6 +306,7 @@ window.onerror = function(msg, src, line, col, err){
       <span id="headerUser" style="font-size:12px;color:var(--text3);margin-right:4px"></span>
       <button class="btn btn-secondary" onclick="openChangePass()" title="Cambiar contraseña">🔑</button>
       <button class="btn btn-secondary" onclick="exportCSV()">⬇ Exportar CSV</button>
+      <button class="btn btn-secondary" onclick="limpiarEspacio()" style="color:var(--amber)">🗑 Liberar espacio</button>
       <button class="btn btn-secondary" onclick="exportHistorialExcel()" title="Exportar historiales a Excel" style="color:var(--green)">📊 Historiales Excel</button>
       <button class="btn btn-primary" id="btnAgregar" onclick="openModal()">＋ Agregar bien</button>
     </div>
@@ -1309,6 +1310,20 @@ window.addEventListener('offline', function(){
 });
 
 // Guardar en localStorage Y en Firebase si está configurado
+function limpiarEspacio(){
+  if(!confirm('¿Eliminar comprobantes guardados para liberar espacio?\nTus datos de servicios y pagos NO se borran.')) return;
+  try{
+    localStorage.removeItem('ps_sv_docs');
+    localStorage.removeItem('ps_rb_docs');
+    svData.forEach(function(s){ delete s.documentos; });
+    rbData.forEach(function(r){ delete r.documentos; });
+    saveAll();
+    showNotif('✓ Espacio liberado. Ya puedes guardar cambios.','green');
+  }catch(e){
+    alert('Error: '+e.message);
+  }
+}
+
 function saveAll(){
   localStorage.setItem(KEYS.hw,JSON.stringify(hwData));
   localStorage.setItem(KEYS.sw,JSON.stringify(swData));
