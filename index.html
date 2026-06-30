@@ -3068,57 +3068,57 @@ function renderMetrics(){
   document.getElementById('metricsBar').innerHTML=`
 
     <div class="metric-card bl-accent" onclick="toggleMetricDetail('detail-sv')" style="cursor:pointer">
-      <div class="m-label">⚡ Servicios ▾</div><div class="m-value">$\${fmt(svTotal)}</div><div class="m-sub">clic para ver detalle</div>
+      <div class="m-label">⚡ Servicios ▾</div><div class="m-value">${fmt(svTotal)}</div><div class="m-sub">clic para ver detalle</div>
     </div>
 
     <div class="metric-card bl-success" onclick="toggleMetricDetail('detail-renta')" style="cursor:pointer">
-      <div class="m-label">🏢 Arrendamiento ▾</div><div class="m-value">$\${fmt(rentaTotalConRecargos)}</div><div class="m-sub">clic para ver detalle</div>
+      <div class="m-label">🏢 Arrendamiento ▾</div><div class="m-value">${fmt(rentaTotalConRecargos)}</div><div class="m-sub">clic para ver detalle</div>
     </div>
 
     <div class="metric-card bl-success" onclick="toggleMetricDetail('detail-cobrar')" style="cursor:pointer">
       <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3);letter-spacing:.5px;margin-bottom:2px">Reembolsos</div>
-      <div class="m-label">💰 Por cobrar ▾</div><div class="m-value" style="color:var(--green)">$\${fmt(depósitoPendiente)}</div><div class="m-sub">clic para ver detalle</div>
+      <div class="m-label">💰 Por cobrar ▾</div><div class="m-value" style="color:var(--green)">${fmt(depósitoPendiente)}</div><div class="m-sub">clic para ver detalle</div>
     </div>
 
     <div class="metric-card bl-danger" onclick="toggleMetricDetail('detail-pagar')" style="cursor:pointer">
       <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text3);letter-spacing:.5px;margin-bottom:2px">Reembolsos</div>
-      <div class="m-label">💸 Por pagar ▾</div><div class="m-value" style="color:var(--red)">$\${fmt(rbCargoMetric)}</div><div class="m-sub">clic para ver detalle</div>
+      <div class="m-label">💸 Por pagar ▾</div><div class="m-value" style="color:var(--red)">${fmt(rbCargoMetric)}</div><div class="m-sub">clic para ver detalle</div>
     </div>
 
     <div class="metric-card" style="border-left:4px solid var(--red);background:var(--red-bg);cursor:pointer" onclick="toggleMetricDetail('detail-vencidos')">
-      <div class="m-label" style="color:var(--red)">🚨 Vencidos ▾</div><div class="m-value" style="color:var(--red)">\${vencidos}</div><div class="m-sub" style="color:var(--red)">\${vencidos>0?'requieren atención':'Sin vencidos ✓'}</div>
+      <div class="m-label" style="color:var(--red)">🚨 Vencidos ▾</div><div class="m-value" style="color:var(--red)">${vencidos}</div><div class="m-sub" style="color:var(--red)">${vencidos>0?'requieren atención':'Sin vencidos ✓'}</div>
     </div>
 
     <div class="metric-card" style="border-left:4px solid #d97706;background:var(--amber-bg);cursor:pointer" onclick="toggleMetricDetail('detail-vencer')">
-      <div class="m-label" style="color:var(--amber)">⏰ Por vencer ▾</div><div class="m-value" style="color:var(--amber)">\${_cntPorVencer}</div><div class="m-sub" style="color:var(--amber)">próximos 7 días</div>
+      <div class="m-label" style="color:var(--amber)">⏰ Por vencer ▾</div><div class="m-value" style="color:var(--amber)">${_cntPorVencer}</div><div class="m-sub" style="color:var(--amber)">próximos 7 días</div>
     </div>
 
     <div class="metric-card" style="border-left:3px solid var(--purple);cursor:pointer" onclick="switchTab('nomina',document.querySelector('.tab-btn[onclick*=nomina]'))">
       <div class="m-label" style="color:var(--purple)">💼 Nómina ▸</div>
-      <div class="m-value">$\${fmt(nmMensualMetric)}</div>
+      <div class="m-value">${fmt(nmMensualMetric)}</div>
       <div class="m-sub">clic para ver detalle</div>
     </div>
 
     <div class="metric-card bl-purple" onclick="toggleMetricDetail('detail-imp')" style="cursor:pointer">
-      <div class="m-label">🧾 Impuestos ▾</div><div class="m-value">$\${fmt(_impTotal)}</div><div class="m-sub">clic para ver detalle</div>
+      <div class="m-label">🧾 Impuestos ▾</div><div class="m-value">${fmt(_impTotal)}</div><div class="m-sub">clic para ver detalle</div>
     </div>
 
     <div class="metric-card" style="grid-column:span 2;border-left:4px solid var(--accent);background:linear-gradient(135deg,#e8eef8 0%,#f5f8ff 60%,var(--surface) 100%);display:flex;flex-direction:column;justify-content:center;padding:16px 20px;cursor:pointer;min-height:88px" onclick="toggleMetricDetail('detail-total')">
       <div class="m-label" style="color:var(--accent);font-weight:700;font-size:11px;margin-bottom:4px">📊 TOTAL MENSUAL COMPROMETIDO ▾</div>
-      <div style="font-size:42px;font-weight:800;font-family:monospace;color:var(--accent);line-height:1">\${fmt(rentaTotalConRecargos+svTotal+swTotal+_impTotal+nmMensualMetric)}</div>
+      <div style="font-size:42px;font-weight:800;font-family:monospace;color:var(--accent);line-height:1">${fmt(rentaTotalConRecargos+svTotal+swTotal+_impTotal+nmMensualMetric)}</div>
       <div style="font-size:11px;color:var(--accent);opacity:.7;margin-top:5px">MXN / mes · pagos fijos · clic para desglose</div>
     </div>
 
     <div class="metric-card bl-accent">
-      <div class="m-label">🖥 Hardware</div><div class="m-value">\${totalBienes}</div><div class="m-sub">bienes registrados</div>
+      <div class="m-label">🖥 Hardware</div><div class="m-value">${totalBienes}</div><div class="m-sub">bienes registrados</div>
     </div>
 
     <div class="metric-card bl-warn">
-      <div class="m-label">⚠ Sin resguardatario</div><div class="m-value">\${sinResguard}</div><div class="m-sub">requieren asignación</div>
+      <div class="m-label">⚠ Sin resguardatario</div><div class="m-value">${sinResguard}</div><div class="m-sub">requieren asignación</div>
     </div>
 
     <div class="metric-card bl-purple" onclick="toggleMetricDetail('detail-sw')" style="cursor:pointer">
-      <div class="m-label">💿 Software ▾</div><div class="m-value">$\${fmt(swTotal)}</div><div class="m-sub">clic para ver detalle</div>
+      <div class="m-label">💿 Software ▾</div><div class="m-value">${fmt(swTotal)}</div><div class="m-sub">clic para ver detalle</div>
     </div>
 
         <!-- Servicios -->
