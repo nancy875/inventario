@@ -339,6 +339,7 @@ window.onerror = function(msg, src, line, col, err){
     <button class="tab-btn" onclick="switchTab('servicios',this)">⚡ Servicios</button>
     <button class="tab-btn" onclick="switchTab('reembolsos',this)">💰 Reembolsos</button>
     <button class="tab-btn" onclick="switchTab('impuestos',this)">🧾 Impuestos</button>
+    <button class="tab-btn" onclick="switchTab('nomina',this)">💼 Nómina</button>
     <button class="tab-btn" onclick="switchTab('resguardatarios',this)">👤 Resguardatarios</button>
     <button class="tab-btn" onclick="switchTab('alertas',this)">🔔 Alertas</button>
     <button class="tab-btn" onclick="switchTab('estrategia',this)">🎯 Estrategia</button>
@@ -544,6 +545,82 @@ window.onerror = function(msg, src, line, col, err){
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeImpModal()">Cancelar</button>
         <button class="btn btn-primary" onclick="saveImp()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════ NÓMINA ══════════════ -->
+  <div id="tab-nomina" style="display:none">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn btn-primary" onclick="openNMModal()">＋ Agregar empleado</button>
+    </div>
+    <div class="section" id="nmTableContainer">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:var(--surface2);font-size:11px;text-transform:uppercase;color:var(--text2)">
+            <th style="padding:10px 12px;text-align:left">EMPLEADO</th>
+            <th style="padding:10px 12px;text-align:left">PUESTO</th>
+            <th style="padding:10px 12px;text-align:left">FRECUENCIA</th>
+            <th style="padding:10px 12px;text-align:right">MONTO TOTAL</th>
+            <th style="padding:10px 12px;text-align:right">MONTO PAGADO</th>
+            <th style="padding:10px 12px;text-align:left">DÍA DE PAGO</th>
+            <th style="padding:10px 12px;text-align:left">STATUS</th>
+            <th style="padding:10px 12px;text-align:left">ACC.</th>
+          </tr>
+        </thead>
+        <tbody id="nmTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODAL NÓMINA ══════════════ -->
+  <div class="modal-overlay" id="nmModal">
+    <div class="modal" style="max-width:600px">
+      <div class="modal-header">
+        <div class="modal-title" id="nmModalTitle">Agregar empleado</div>
+        <button class="modal-close" onclick="closeModal('nmModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group"><label>Nombre del empleado *</label><input type="text" id="nm-nombre" placeholder="Nombre completo"></div>
+          <div class="form-group"><label>Puesto</label><input type="text" id="nm-puesto" placeholder="Ej. Analista, Director..."></div>
+          <div class="form-group">
+            <label>Frecuencia de pago</label>
+            <select class="form-sel" id="nm-frecuencia">
+              <option value="Mensual">Mensual</option>
+              <option value="Quincenal">Quincenal</option>
+              <option value="Semanal">Semanal</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Monto total ($)</label><input type="number" id="nm-montoTotal" placeholder="0.00"></div>
+          <div class="form-group"><label>Día de pago</label><input type="number" id="nm-diaPago" min="1" max="31" placeholder="Ej. 15, 30..."></div>
+          <div class="form-group"><label>Fecha límite</label><input type="date" id="nm-fechalimite"></div>
+        </div>
+        <div style="margin-top:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <label style="font-weight:600;font-size:13px">Pagos realizados</label>
+            <button type="button" class="btn btn-secondary" onclick="nmAgregarPago()" style="font-size:12px;padding:4px 10px">＋ Agregar pago</button>
+          </div>
+          <div id="nmPagosRows"></div>
+        </div>
+        <div style="margin-top:16px">
+          <label style="font-weight:600;font-size:13px">📎 Comprobante</label>
+          <div style="border:1px dashed var(--border);border-radius:8px;padding:12px;margin-top:6px">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('nm-archivo-input').click()">📎 Adjuntar archivo</button>
+            <span style="font-size:12px;color:var(--text3);margin-left:8px">PDF, JPG o PNG · máx. 5 MB</span>
+            <input type="file" id="nm-archivo-input" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="nmAdjuntarArchivo(this)">
+            <div id="nm-archivo-preview" style="margin-top:8px;font-size:12px;color:var(--text2)">Sin comprobante adjunto</div>
+          </div>
+        </div>
+        <div style="margin-top:16px">
+          <label style="font-weight:600;font-size:13px">Observaciones</label>
+          <textarea id="nm-obs" rows="2" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px;margin-top:4px;resize:vertical"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('nmModal')">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveNM()">Guardar</button>
       </div>
     </div>
   </div>
@@ -1077,7 +1154,7 @@ window.onerror = function(msg, src, line, col, err){
 // ══════════════════════════════════════════════
 // DATA
 // ══════════════════════════════════════════════
-const KEYS = {hw:'ps_hw11',sw:'ps_sw11',ar:'ps_ar14',sv:'ps_sv11',rb:'ps_rb11',imp:'ps_imp11',cfg:'ps_cfg11',alm:'ps_alm01'};
+const KEYS = {hw:'ps_hw11',sw:'ps_sw11',ar:'ps_ar14',sv:'ps_sv11',rb:'ps_rb11',imp:'ps_imp11',cfg:'ps_cfg11',alm:'ps_alm01',nm:'ps_nm01'};
 
 // ── AUTO-ACTUALIZACIÓN DIARIA ─────────────────────────────────────────
 (function(){
@@ -1197,6 +1274,7 @@ function logAudit(accion, modulo, nombre, datoAntes, datoDespues){
 let swData = JSON.parse(localStorage.getItem(KEYS.sw)) || defaultSW;
 let arData = JSON.parse(localStorage.getItem(KEYS.ar)) || defaultAR;
 let svData  = JSON.parse(localStorage.getItem(KEYS.sv))  || defaultSV;
+let nmData  = JSON.parse(localStorage.getItem(KEYS.nm))  || [];
 let impData = JSON.parse(localStorage.getItem(KEYS.imp)) || [
   {tipo:'SAT',concepto:'Impuestos Diciembre',monto:420,periodo:'Diciembre 2025',fechalimite:'',status:'pagado',notas:'',archivo:null},
   {tipo:'SAT',concepto:'Impuestos Enero 2026',monto:426,periodo:'Enero 2026',fechalimite:'',status:'pagado',notas:'',archivo:null},
@@ -1310,6 +1388,195 @@ window.addEventListener('offline', function(){
 });
 
 // Guardar en localStorage Y en Firebase si está configurado
+// ═══════════════════════════════════════════════════════
+// MÓDULO NÓMINA
+// ═══════════════════════════════════════════════════════
+var nmEditId = null;
+var _nmArchivoTemp = null;
+
+function openNMModal(id=null){
+  nmEditId = id;
+  _nmArchivoTemp = null;
+  document.getElementById('nm-nombre').value = '';
+  document.getElementById('nm-puesto').value = '';
+  document.getElementById('nm-frecuencia').value = 'Mensual';
+  document.getElementById('nm-montoTotal').value = '';
+  document.getElementById('nm-diaPago').value = '';
+  document.getElementById('nm-fechalimite').value = '';
+  document.getElementById('nm-obs').value = '';
+  document.getElementById('nm-archivo-preview').textContent = 'Sin comprobante adjunto';
+  document.getElementById('nmPagosRows').innerHTML = '';
+  document.getElementById('nmModalTitle').textContent = id ? 'Editar empleado' : 'Agregar empleado';
+  if(id){
+    const e = nmData.find(x=>x.id===id); if(!e) return;
+    document.getElementById('nm-nombre').value = e.nombre||'';
+    document.getElementById('nm-puesto').value = e.puesto||'';
+    document.getElementById('nm-frecuencia').value = e.frecuencia||'Mensual';
+    document.getElementById('nm-montoTotal').value = e.montoTotal||'';
+    document.getElementById('nm-diaPago').value = e.diaPago||'';
+    document.getElementById('nm-fechalimite').value = e.fechalimite||'';
+    document.getElementById('nm-obs').value = e.obs||'';
+    if(e.archivo) document.getElementById('nm-archivo-preview').textContent = '📎 '+e.archivoNombre;
+    _nmArchivoTemp = e.archivo||null;
+    (e.pagos||[]).forEach(function(p){ nmAgregarPagoFila(p.monto, p.fecha); });
+  }
+  document.getElementById('nmModal').classList.add('open');
+}
+
+function nmAgregarPago(){
+  nmAgregarPagoFila('','');
+}
+
+function nmAgregarPagoFila(monto, fecha){
+  var container = document.getElementById('nmPagosRows');
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;align-items:center';
+  row.innerHTML = '<input type="number" placeholder="Monto ($)" value="'+(monto||'')+'" style="flex:1;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px">'+
+    '<input type="date" value="'+(fecha||'')+'" style="flex:1;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px">'+
+    '<button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:4px">✕</button>';
+  container.appendChild(row);
+}
+
+function nmAdjuntarArchivo(input){
+  var file = input.files[0]; if(!file) return;
+  if(file.size > 5*1024*1024){ showNotif('El archivo supera 5MB','amber'); input.value=''; return; }
+  var reader = new FileReader();
+  reader.onload = function(e){
+    _nmArchivoTemp = e.target.result;
+    document.getElementById('nm-archivo-preview').innerHTML = '📎 <strong>'+file.name+'</strong> ('+Math.round(file.size/1024)+'KB) <button type="button" onclick="nmQuitarArchivo()" style="background:none;border:none;color:var(--red);cursor:pointer;margin-left:8px">✕ Quitar</button>';
+    input.value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function nmQuitarArchivo(){
+  _nmArchivoTemp = null;
+  document.getElementById('nm-archivo-preview').textContent = 'Sin comprobante adjunto';
+}
+
+function saveNM(){
+  var nombre = document.getElementById('nm-nombre').value.trim();
+  if(!nombre){ alert('El nombre del empleado es requerido.'); return; }
+  var pagosRows = document.getElementById('nmPagosRows').children;
+  var pagos = [];
+  for(var i=0; i<pagosRows.length; i++){
+    var inputs = pagosRows[i].querySelectorAll('input');
+    var m = parseFloat(inputs[0].value)||0;
+    var f = inputs[1].value||'';
+    if(m||f) pagos.push({monto:m, fecha:f});
+  }
+  var montoPagado = pagos.reduce(function(s,p){ return s+p.monto; }, 0);
+  var montoTotal = parseFloat(document.getElementById('nm-montoTotal').value)||0;
+  var obj = {
+    id: nmEditId || Date.now(),
+    nombre: nombre,
+    puesto: document.getElementById('nm-puesto').value.trim(),
+    frecuencia: document.getElementById('nm-frecuencia').value,
+    montoTotal: montoTotal,
+    diaPago: document.getElementById('nm-diaPago').value,
+    fechalimite: document.getElementById('nm-fechalimite').value,
+    obs: document.getElementById('nm-obs').value.trim(),
+    pagos: pagos,
+    montoPagado: montoPagado,
+    archivo: _nmArchivoTemp,
+    statusPago: montoPagado >= montoTotal && montoTotal > 0 ? 'pagado' : 'pendiente'
+  };
+  if(nmEditId){
+    var i = nmData.findIndex(function(x){ return x.id===nmEditId; });
+    if(i>=0){ logAudit('EDITAR','NM',obj.nombre,nmData[i],obj); nmData[i]=obj; }
+  } else {
+    logAudit('CREAR','NM',obj.nombre,null,obj);
+    nmData.push(obj);
+  }
+  saveAll(); closeModal('nmModal'); renderNM(); renderMetrics(); checkAlertBanner();
+  showNotif('✓ Empleado guardado','green');
+}
+
+function deleteNM(id){
+  var e = nmData.find(function(x){ return x.id===id; }); if(!e) return;
+  if(!confirm('¿Eliminar "'+e.nombre+'"? Quedará en el historial de eliminados.')) return;
+  var hoy=new Date(), usr='';
+  try{ var _s=JSON.parse(sessionStorage.getItem('proesa_user')); usr=_s?_s.nombre:''; }catch(ex){}
+  _papelera.unshift({modulo:'NM',nombre:e.nombre,fechaEliminacion:hoy.toISOString().slice(0,10),horaEliminacion:hoy.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),eliminadoPor:usr,datosCompletos:JSON.parse(JSON.stringify(e))});
+  savePapelera();
+  logAudit('ELIMINAR','NM',e.nombre,e,null);
+  nmData = nmData.filter(function(x){ return x.id!==id; });
+  saveAll(); renderNM(); renderMetrics(); checkAlertBanner();
+  showNotif('✓ Eliminado','green');
+}
+
+function nmStatusBg(s){ return s==='pagado'?'var(--green-bg)':s==='vencido'?'var(--red-bg)':'var(--amber-bg)'; }
+function nmStatusColor(s){ return s==='pagado'?'var(--green)':s==='vencido'?'var(--red)':'var(--amber)'; }
+function nmStatusLabel(s){ return s==='pagado'?'✅ Pagado':s==='vencido'?'🚨 Vencido':'🔥 Pendiente'; }
+
+function cambiarStatusNM(id, nuevoStatus){
+  var e = nmData.find(function(x){ return x.id===id; }); if(!e) return;
+  var prev = e.statusPago;
+  e.statusPago = nuevoStatus;
+  if(nuevoStatus==='pagado'){
+    // Avanzar fechalimite al próximo ciclo
+    var frec=(e.frecuencia||'Mensual').toLowerCase();
+    var base = e.fechalimite ? new Date(e.fechalimite) : new Date();
+    if(frec==='mensual') base.setMonth(base.getMonth()+1);
+    else if(frec==='quincenal') base.setDate(base.getDate()+15);
+    else if(frec==='semanal') base.setDate(base.getDate()+7);
+    e.fechalimite = base.toISOString().slice(0,10);
+    logAudit('PAGAR','NM',e.nombre,{statusPago:prev},{statusPago:'pagado',fechalimite:e.fechalimite});
+  }
+  saveAll(); renderNM(); renderMetrics(); checkAlertBanner();
+}
+
+function renderNM(){
+  var tbody = document.getElementById('nmTableBody'); if(!tbody) return;
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  // Actualizar status por fecha
+  nmData.forEach(function(e){
+    if(e.statusPago==='pagado' && e.fechalimite){
+      var d=new Date(e.fechalimite); d.setHours(0,0,0,0);
+      if(d>=hoy) return; // fecha futura: dejar pagado
+    }
+    if(!e.statusPago || e.statusPago!=='pagado'){
+      if(e.fechalimite){
+        var d=new Date(e.fechalimite); d.setHours(0,0,0,0);
+        var dias=Math.round((d-hoy)/86400000);
+        if(dias<0) e.statusPago='vencido';
+        else if(e.statusPago!=='pendiente') e.statusPago='pendiente';
+      }
+    }
+  });
+  if(!nmData.length){
+    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text3)">Sin empleados registrados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = nmData.map(function(e){
+    var montoPend = (e.montoTotal||0)-(e.montoPagado||0);
+    var diasR = e.fechalimite ? Math.round((new Date(e.fechalimite)-hoy)/86400000) : null;
+    var fechaBadge = e.fechalimite ? (diasR<0?'<span style="background:var(--red-bg);color:var(--red);border-radius:4px;padding:2px 6px;font-size:11px">⚠ VENCIDO '+e.fechalimite+'</span>':'<span style="font-size:12px">📅 '+e.fechalimite+'</span>') : '—';
+    return '<tr style="border-bottom:1px solid var(--border)">'+
+      '<td style="padding:10px 12px;font-weight:600">'+e.nombre+'</td>'+
+      '<td style="padding:10px 12px;color:var(--text2)">'+( e.puesto||'—')+'</td>'+
+      '<td style="padding:10px 12px"><span style="background:var(--accent-bg);color:var(--accent);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600">'+e.frecuencia+'</span></td>'+
+      '<td style="padding:10px 12px;text-align:right;font-weight:600;font-family:monospace">$'+fmt(e.montoTotal||0)+'</td>'+
+      '<td style="padding:10px 12px;text-align:right;color:var(--green);font-family:monospace">$'+fmt(e.montoPagado||0)+'</td>'+
+      '<td style="padding:10px 12px">'+fechaBadge+'</td>'+
+      '<td style="padding:10px 12px"><select onchange="cambiarStatusNM('+e.id+',this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-weight:600;background:'+nmStatusBg(e.statusPago)+';color:'+nmStatusColor(e.statusPago)+'">'+
+        '<option value="pendiente" '+(e.statusPago==='pendiente'?'selected':'')+'>🔥 Pendiente</option>'+
+        '<option value="pagado" '+(e.statusPago==='pagado'?'selected':'')+'>✅ Pagado</option>'+
+        '<option value="vencido" '+(e.statusPago==='vencido'?'selected':'')+'>🚨 Vencido</option>'+
+      '</select></td>'+
+      '<td style="padding:10px 12px">'+
+        '<button onclick="openNMModal('+e.id+')" style="background:none;border:none;cursor:pointer;color:var(--accent)" title="Editar">✏️</button>'+
+        (e.archivo?'<button onclick="nmVerArchivo('+e.id+')" style="background:none;border:none;cursor:pointer;color:var(--green)" title="Ver comprobante">👁</button>':'<span style="display:inline-block;width:28px"></span>')+
+        '<button onclick="deleteNM('+e.id+')" style="background:none;border:none;cursor:pointer;color:var(--red)" title="Eliminar">🗑</button>'+
+      '</td></tr>';
+  }).join('');
+}
+
+function nmVerArchivo(id){
+  var e = nmData.find(function(x){ return x.id===id; }); if(!e||!e.archivo) return;
+  var w = window.open(); w.document.write('<img src="'+e.archivo+'" style="max-width:100%"><br><a href="'+e.archivo+'" download="comprobante">Descargar</a>');
+}
+
 function limpiarEspacio(){
   if(!confirm('¿Eliminar comprobantes guardados para liberar espacio?\nTus datos de servicios y pagos NO se borran.')) return;
   try{
@@ -1330,11 +1597,12 @@ function saveAll(){
   localStorage.setItem(KEYS.ar,JSON.stringify(arData));
   localStorage.setItem(KEYS.sv,JSON.stringify(svData));
   localStorage.setItem(KEYS.rb,JSON.stringify(rbData));
+  localStorage.setItem(KEYS.nm,JSON.stringify(nmData));
   localStorage.setItem(KEYS.imp,JSON.stringify(impData));
   // Sincronizar via Firebase SDK si está activo
   if(window._fbReady && _fbListenersActive){
     try{ fbWrite('hw',hwData); fbWrite('sw',swData); fbWrite('ar',arData);
-         fbWrite('sv',svData); fbWrite('rb',rbData); }catch(e){}
+         fbWrite('sv',svData); fbWrite('rb',rbData); fbWrite('nm',nmData); }catch(e){}
   }
 }
 
@@ -2709,7 +2977,9 @@ function renderMetrics(){
   // Métricas separadas: a favor (nos pagan) vs a cargo (pagamos)
   const _rbActivos=rbData.filter(r=>{
     if(r.status==='devuelto'||r.status==='pagado') return false;
-    return true; // Mostrar todos los pendientes sin filtrar por fecha
+    if(!r.fechaEsperada) return true;
+    const fe=new Date(r.fechaEsperada);
+    return (fe.getFullYear()<_hoyRBM.getFullYear())||(fe.getFullYear()===_hoyRBM.getFullYear()&&fe.getMonth()<=_hoyRBM.getMonth());
   });
   const depósitoPendiente=_rbActivos.filter(r=>(r.dirección||'a_favor')==='a_favor').reduce((s,r)=>s+(r.montoTotal||r.monto||0),0);
   const rbCargoMetric=_rbActivos.filter(r=>r.dirección==='a_cargo').reduce((s,r)=>s+(r.montoTotal||r.monto||0),0);
@@ -2737,6 +3007,11 @@ function renderMetrics(){
     const d=parseDate(s.fechalimite),n=daysTo(d);
     if(n!==null&&n<0) _cntVencidos++;
   });
+  nmData.forEach(function(e){
+    if(!e.fechalimite||e.statusPago==='pagado') return;
+    var d=parseDate(e.fechalimite),n=daysTo(d);
+    if(n!==null&&n<0) _cntVencidos++;
+  });
   const vencidos=_cntVencidos;
   // Calcular svTotal para métricas
   const svTotal=svData.filter(s=>s.statusPago!=='pagado'&&s.statusPago!=='en tiempo').reduce((s,v)=>s+(v.monto||0),0);
@@ -2754,7 +3029,8 @@ function renderMetrics(){
   const _porVencerSV=svData.filter(s=>s.fechalimite&&s.statusPago!=='pagado'&&s.statusPago!=='en tiempo'&&daysTo(parseDate(s.fechalimite))>=0&&daysTo(parseDate(s.fechalimite))<=_diasAlerta);
   const _porVencerIMP=(impData||[]).filter(i=>i.status!=='pagado'&&i.fechalimite&&daysTo(parseDate(i.fechalimite))>=0&&daysTo(parseDate(i.fechalimite))<=_diasAlerta);
   const _porVencerRB=rbData.filter(r=>r.status!=='devuelto'&&r.status!=='pagado'&&r.fechaEsperada&&daysTo(parseDate(r.fechaEsperada))>=0&&daysTo(parseDate(r.fechaEsperada))<=_diasAlerta);
-  const _cntPorVencer=_porVencerSW.length+_porVencerAR.length+_porVencerSV.length+_porVencerIMP.length+_porVencerRB.length;
+  const _porVencerNM=nmData.filter(function(e){ return e.statusPago!=='pagado'&&e.fechalimite&&daysTo(parseDate(e.fechalimite))>=0&&daysTo(parseDate(e.fechalimite))<=_diasAlerta; });
+  const _cntPorVencer=_porVencerSW.length+_porVencerAR.length+_porVencerSV.length+_porVencerIMP.length+_porVencerRB.length+_porVencerNM.length;
 
   var _impPendMet = impData ? impData.filter(function(x){ return x.status !== 'pagado'; }) : [];
   var _impTotal = _impPendMet.reduce(function(s,x){ return s+(parseFloat(x.monto)||0); }, 0);
@@ -3921,7 +4197,7 @@ function renderStrategy(){
 // ══════════════════════════════════════════════
 // TABS
 // ══════════════════════════════════════════════
-const tabMap={'hardware':()=>{},'software':renderSW,'arrendamiento':renderAR,'servicios':renderSV,'resguardatarios':renderResguardatarios,'alertas':renderAlertas,'estrategia':renderStrategy,'reembolsos':function(){renderReembolsos();renderDocsRB();},'finanzas':renderFinanzas,'impuestos':renderIMP,'almacen':function(){try{renderAlmInventario();}catch(e){}}};
+const tabMap={'hardware':()=>{},'software':renderSW,'arrendamiento':renderAR,'servicios':renderSV,'nomina':renderNM,'resguardatarios':renderResguardatarios,'alertas':renderAlertas,'estrategia':renderStrategy,'reembolsos':function(){renderReembolsos();renderDocsRB();},'finanzas':renderFinanzas,'impuestos':renderIMP,'almacen':function(){try{renderAlmInventario();}catch(e){}}};
 function switchTab(id,btn){
   ['hardware','software','arrendamiento','servicios','resguardatarios','alertas','estrategia','reembolsos','finanzas','impuestos','almacen'].forEach(t=>{const el=document.getElementById('tab-'+t);if(el)el.style.display=t===id?'block':'none';});
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
