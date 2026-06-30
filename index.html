@@ -1440,6 +1440,8 @@ function fbLoadInitial(){
         }
       });
       svData=arr; localStorage.setItem(KEYS.sv,JSON.stringify(arr));
+      // Si se corrigieron fechas, guardar de vuelta en Firebase para limpiar datos viejos
+      try{ if(window._fbReady && _fbListenersActive) fbWrite('sv', arr); }catch(e){}
     }
     if(val.rb){ const arr=Array.isArray(val.rb)?val.rb:Object.values(val.rb); rbData=arr; localStorage.setItem(KEYS.rb,JSON.stringify(arr)); }
     return true;
