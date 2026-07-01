@@ -307,6 +307,7 @@ window.onerror = function(msg, src, line, col, err){
       <button class="btn btn-secondary" onclick="openChangePass()" title="Cambiar contraseña">🔑</button>
       <button class="btn btn-secondary" onclick="exportCSV()">⬇ Exportar CSV</button>
       <button class="btn btn-secondary" onclick="limpiarEspacio()" style="color:var(--amber)">🗑 Liberar espacio</button>
+      <button class="btn btn-secondary" onclick="forzarSync()" style="color:var(--green)" title="Subir todos los datos locales a Firebase">☁️ Forzar sync</button>
       <button class="btn btn-secondary" onclick="exportHistorialExcel()" title="Exportar historiales a Excel" style="color:var(--green)">📊 Historiales Excel</button>
       <button class="btn btn-primary" id="btnAgregar" onclick="openModal()">＋ Agregar bien</button>
     </div>
@@ -1594,6 +1595,26 @@ function nmVerArchivo(id){
   var w = window.open(); w.document.write('<img src="'+e.archivo+'" style="max-width:100%"><br><a href="'+e.archivo+'" download="comprobante">Descargar</a>');
 }
 
+function forzarSync(){
+  if(!fbReady()){
+    showNotif('⚠ Firebase no está conectado. Verifica tu conexión.','amber');
+    return;
+  }
+  try{
+    _ignorarSiguienteUpdate = false;
+    fbWrite('hw', hwData);
+    fbWrite('sw', swData);
+    fbWrite('ar', arData);
+    fbWrite('sv', svData);
+    fbWrite('rb', rbData);
+    fbWrite('imp', impData);
+    fbWrite('nm', nmData);
+    showNotif('☁️ Todos los datos subidos a Firebase. Otros usuarios verán los cambios en segundos.','green');
+  }catch(e){
+    showNotif('⚠ Error al sincronizar: '+e.message,'amber');
+  }
+}
+
 function limpiarEspacio(){
   if(!confirm('¿Eliminar comprobantes guardados para liberar espacio?\nTus datos de servicios y pagos NO se borran.')) return;
   try{
@@ -1687,6 +1708,7 @@ function fbStartListeners(){
     sv:  function(){ try{renderSV();}catch(e){} try{renderMetrics();}catch(e){} try{renderFinancialSummary();}catch(e){} try{checkAlertBanner();}catch(e){} },
     rb:  function(){ try{renderReembolsos();}catch(e){} try{renderMetrics();}catch(e){} try{renderFinancialSummary();}catch(e){} },
     imp: function(){ try{renderIMP();}catch(e){} try{renderMetrics();}catch(e){} try{renderFinancialSummary();}catch(e){} },
+    nm:  function(){ try{renderNM();}catch(e){} try{renderMetrics();}catch(e){} try{renderFinancialSummary();}catch(e){} },
   };
 
   Object.keys(paths).forEach(function(path){
@@ -1699,9 +1721,29 @@ function fbStartListeners(){
       if(path==='hw') hwData=arr;
       else if(path==='sw') swData=arr;
       else if(path==='ar') arData=arr;
-      else if(path==='sv') svData=arr;
+      else if(path==='sv'){
+        // Corregir fechas de servicios pagados con fecha vencida
+        var _hoyFb=new Date(); _hoyFb.setHours(0,0,0,0);
+        arr.forEach(function(s){
+          if((s.statusPago==='pagado'||s.statusPago==='en tiempo')&&s.fechalimite){
+            var _df=new Date(s.fechalimite); _df.setHours(0,0,0,0);
+            if(_df<_hoyFb){
+              var _f=(s.frecuencia||'Mensual').toLowerCase();
+              var _n=new Date(_hoyFb);
+              if(_f==='mensual') _n.setMonth(_n.getMonth()+1);
+              else if(_f==='bimestral') _n.setMonth(_n.getMonth()+2);
+              else if(_f==='trimestral') _n.setMonth(_n.getMonth()+3);
+              else if(_f==='semestral') _n.setMonth(_n.getMonth()+6);
+              else if(_f==='anual') _n.setFullYear(_n.getFullYear()+1);
+              s.fechalimite=_n.toISOString().slice(0,10);
+            }
+          }
+        });
+        svData=arr;
+      }
       else if(path==='rb') rbData=arr;
       else if(path==='imp') impData=arr;
+      else if(path==='nm') nmData=arr;
       if(KEYS[path]) localStorage.setItem(KEYS[path], JSON.stringify(arr));
       renderFn();
       showSyncNotif('🔄 Actualizado en tiempo real');
@@ -2424,6 +2466,7 @@ try{
         if(e.data.ar){arData=JSON.parse(e.data.ar);try{renderAR();}catch(x){}}
         if(e.data.sv){svData=JSON.parse(e.data.sv);try{renderSV();}catch(x){}}
         if(e.data.rb){rbData=JSON.parse(e.data.rb);try{renderReembolsos();}catch(x){}}
+        if(e.data.nm){nmData=JSON.parse(e.data.nm);try{renderNM();}catch(x){}}
         try{renderMetrics();renderFinancialSummary();checkAlertBanner();}catch(x){}
         try{showSyncNotif('🔄 Actualizado por otro usuario');}catch(x){}
       }catch(ex){}
@@ -2525,6 +2568,7 @@ function autoActualizarStatus(){
     }
   });
 
+  var _svRenovados = [];
   svData.forEach(function(s){
     if(s.statusPago==='pagado'||s.statusPago==='en tiempo'){
       // Si fechalimite existe y es futura: el pago es válido, no tocar
@@ -2534,7 +2578,11 @@ function autoActualizarStatus(){
         // fechalimite ya venció: avanzar al siguiente ciclo y resetear a pendiente
         var _ult=(s.historialPagos&&s.historialPagos.length)?s.historialPagos[0].fecha:null;
         var _prox=proximaFecha(_ult,s.frecuencia||'Mensual');
-        if(_prox&&_prox<=hoy){s.statusPago='pendiente';s.fechalimite=_prox.toISOString().slice(0,10);cambios++;}
+        if(_prox&&_prox<=hoy){
+          s.statusPago='pendiente';s.fechalimite=_prox.toISOString().slice(0,10);
+          _svRenovados.push(s.servicio+(s.concepto?' — '+s.concepto:''));
+          cambios++;
+        }
       }
       return;
     }
@@ -2568,14 +2616,70 @@ function autoActualizarStatus(){
     if(ns&&ns!==imp.status){imp.status=ns;cambios++;}
   });
 
+  // Nómina: renovar automáticamente cuando la fecha límite vence
+  var _nmRenovados = [];
+  nmData.forEach(function(e){
+    if(e.statusPago==='pagado'){
+      if(e.fechalimite){
+        var _diff=calcDiff(e.fechalimite);
+        if(_diff!==null && _diff>=0) return; // fecha futura: dejar pagado
+        // Venció: resetear a pendiente y avanzar fecha al siguiente ciclo
+        var _frec=(e.frecuencia||'Mensual').toLowerCase();
+        var _base=new Date(hoy);
+        if(_frec==='mensual') _base.setMonth(_base.getMonth()+1);
+        else if(_frec==='quincenal') _base.setDate(_base.getDate()+15);
+        else if(_frec==='semanal') _base.setDate(_base.getDate()+7);
+        else _base.setMonth(_base.getMonth()+1);
+        e.statusPago='pendiente';
+        e.montoPagado=0;
+        e.pagos=[];
+        e.fechalimite=_base.toISOString().slice(0,10);
+        _nmRenovados.push(e.nombre);
+        cambios++;
+      }
+      return;
+    }
+    if(!e.fechalimite) return;
+    var _diffNM=calcDiff(e.fechalimite);
+    if(_diffNM!==null && _diffNM<0 && e.statusPago!=='vencido'){
+      e.statusPago='vencido'; cambios++;
+    }
+  });
+
+  // _svRenovados ya se llena en el forEach de svData arriba
+
   if(cambios>0){
     saveAll();
     try{renderAR();}catch(e){}
     try{renderSV();}catch(e){}
     try{renderSW();}catch(e){}
     try{renderIMP();}catch(e){}
+    try{renderNM();}catch(e){}
     try{renderMetrics();}catch(e){}
     try{checkAlertBanner();}catch(e){}
+
+    // Alerta visible si hay pagos renovados
+    var _renovadosTodos = _nmRenovados.concat(_svRenovados);
+    if(_renovadosTodos.length > 0){
+      setTimeout(function(){
+        var msg = '🔔 Pagos renovados automáticamente:';
+        _renovadosTodos.forEach(function(n){ msg += ' | '+n; });
+        // Mostrar banner de alerta en la app
+        var banner = document.getElementById('autoBanner');
+        if(!banner){
+          banner = document.createElement('div');
+          banner.id = 'autoBanner';
+          banner.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#1a7a4a;color:#fff;padding:14px 24px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2);max-width:500px;line-height:1.6;cursor:pointer';
+          banner.onclick = function(){ this.remove(); };
+          document.body.appendChild(banner);
+        }
+        banner.innerHTML = '🔔 <strong>'+_renovadosTodos.length+' pago'+(  _renovadosTodos.length>1?'s':'')+' renovado'+(  _renovadosTodos.length>1?'s':'')+' automáticamente</strong><br>'
+          + _renovadosTodos.map(function(n){ return '• '+n; }).join('<br>')
+          + '<br><span style="font-size:11px;opacity:.8">Haz clic para cerrar · Ya están en Pendiente</span>';
+        setTimeout(function(){ if(banner.parentNode) banner.remove(); }, 8000);
+      }, 1500);
+    }
+
     showSyncNotif('🔄 '+cambios+' status actualizado'+(cambios!==1?'s':'')+' automáticamente');
   }
   return cambios;
