@@ -241,13 +241,15 @@ window._fbInit = function(config){
       console.log('Firebase compat listo (autenticado)');
       if(!yaEstabaListo && window._onFirebaseReady) window._onFirebaseReady();
     }
-    // Autenticación anónima: requerida por las reglas de seguridad (auth != null)
+    // Solo usuarios con cuenta real de Firebase (sin acceso anónimo)
     if(firebase.auth().currentUser){
       _iniciarDb();
     } else {
-      firebase.auth().signInAnonymously()
-        .then(function(){ _iniciarDb(); })
-        .catch(function(err){ console.error('Firebase auth error:', err); });
+      var _unsub = firebase.auth().onAuthStateChanged(function(u){
+        _unsub();
+        if(u){ _iniciarDb(); }
+        else { console.warn('Sin sesión de Firebase: no se conecta a la base de datos'); }
+      });
     }
   }catch(e){ console.error('Firebase init error:', e); }
 };
@@ -943,7 +945,7 @@ window.onerror = function(msg, src, line, col, err){
           <li>En el proyecto → <strong>Realtime Database</strong> → <strong>Create Database</strong> → elige modo de prueba → selecciona la región más cercana (us-central1)</li>
           <li>Ve a <strong>Project Settings</strong> (ícono ⚙) → <strong>General</strong> → baja hasta <strong>"Your apps"</strong> → clic en <strong>&lt;/&gt; (Web)</strong> → registra la app</li>
           <li>Copia el objeto <code>firebaseConfig</code> que aparece y pega cada campo abajo</li>
-          <li>En <strong>Realtime Database → Rules</strong> cambia las reglas a: <code style="background:var(--surface2);padding:2px 6px;border-radius:4px">".read": true, ".write": true</code> y pública</li>
+          <li>En <strong>Realtime Database → Rules</strong> usa las reglas con lista de usuarios autorizados (archivo <code>reglas-firebase.json</code>). <strong>Nunca</strong> dejes <code>".read": true, ".write": true</code>.</li>
         </ol>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
@@ -2616,7 +2618,34 @@ function fbCargarYEscuchar(){
 // de escribir, en vez de sobrescribir todo el nodo.
 var _MODULOS_FUSION_SEGURA = {gastos:1, requisiciones:1, ege:1, nm:1, rb2:1, ar:1, sv:1, sw:1, hw:1, imp:1, rb:1};
 
+// ── FICHA PÚBLICA DE ACTIVOS (lo que ve cualquiera al escanear una etiqueta) ──
+// Solo se publican datos básicos del bien en activosPublicos/<folio>. Nada de facturas,
+// proveedores, historial ni ningún otro módulo del sistema.
+var _FOLIO_RE = /^(EC|ME)-\d{10}$/;
+function _folioDeBien(h){ if(!h) return ''; if(h.etiqueta && _FOLIO_RE.test(h.etiqueta)) return h.etiqueta; return _FOLIO_RE.test(h.inv||'') ? h.inv : ''; }
+function _fichaPublica(h){
+  return {folio:_folioDeBien(h), desc:h.desc||'', clasif:h.clasif||'', marca:h.marca||'', modelo:h.modelo||'',
+    estado:h.estado||'', ubicacion:h.ubicacion||'', resguardatario:h.resguardatario||'', tieneFoto:!!h.tieneFoto, actualizado:Date.now()};
+}
+function _fbRestPatch(path, data){
+  return _fbGetToken().then(function(token){
+    if(!token) return;
+    return fetch(FB_DB_URL + path + '.json?auth=' + token, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+  }).catch(function(){});
+}
+var _pubTimer = null;
+function publicarActivosPublicos(){
+  clearTimeout(_pubTimer);
+  _pubTimer = setTimeout(function(){
+    var mapa = {};
+    (hwData||[]).forEach(function(h){ var f=_folioDeBien(h); if(f) mapa[f]=_fichaPublica(h); });
+    if(Object.keys(mapa).length) _fbRestPatch('/activosPublicos', mapa);
+  }, 1500);
+}
+function quitarActivoPublico(h){ var f=_folioDeBien(h); if(f){ var m={}; m[f]=null; _fbRestPatch('/activosPublicos', m); } }
+
 function fbWrite(path, data){
+  if(path==='hw'){ try{ publicarActivosPublicos(); }catch(e){} }
   if(!navigator.onLine) return;
   // Guardar también en localStorage para el módulo correspondiente
   if(KEYS[path]) localStorage.setItem(KEYS[path], JSON.stringify(data));
@@ -4996,7 +5025,7 @@ function renderHW(){
   const fm=document.getElementById('hwFiltMarca')?document.getElementById('hwFiltMarca').value:'';
   const fsr=document.getElementById('hwFiltSinResg')?document.getElementById('hwFiltSinResg').checked:false;
   let data=hwData.filter(h=>{
-    if(q&&![h.inv,h.desc,h.marca,h.modelo,h.serie,h.resguardatario,h.color,h.obs,h.especif].some(v=>(v||'').toLowerCase().includes(q)))return false;
+    if(q&&![h.inv,h.etiqueta,h.desc,h.marca,h.modelo,h.serie,h.resguardatario,h.color,h.obs,h.especif].some(v=>(v||'').toLowerCase().includes(q)))return false;
     if(fc&&h.clasif!==fc)return false;
     if(fe&&h.estado!==fe)return false;
     if(fu&&h.ubicacion!==fu)return false;
@@ -5014,7 +5043,7 @@ function renderHW(){
     return 'bg-gray';
   };
   document.getElementById('hwBody').innerHTML=data.length?data.map(h=>`<tr>
-    <td style="font-family:monospace;font-size:12px">${h.inv}</td>
+    <td style="font-family:monospace;font-size:12px">${h.inv}${h.etiqueta&&h.etiqueta!==h.inv?`<br><span style="font-size:10px;color:var(--accent)">🏷 ${h.etiqueta}</span>`:''}${h.tieneFoto?`<br><button class="btn-icon" title="Ver foto" onclick="hwVerFotoQR('${h.etiqueta||h.inv}')" style="padding:0;font-size:12px">📷</button>`:''}</td>
     <td><span class="badge ${clasifCls(h.clasif)}" style="font-size:10px">${h.clasif}</span></td>
     <td><strong>${h.desc}</strong>${h.color?`<br><span style="font-size:11px;color:var(--text3)">${h.color}</span>`:''}</td>
     <td>${h.marca||'—'}${h.modelo&&h.modelo!=='N/A'?`<br><span style="font-size:11px;color:var(--text3)">${h.modelo}</span>`:''}</td>
@@ -7314,7 +7343,7 @@ function saveHW(){
     const prev=hwData[i];
     try{ _resgAsegurarHistorial(prev); }catch(e){}
     // Conservar campos que no están en el formulario (historial de resguardo, etc.)
-    ['historialResguardo','resguardoAnterior'].forEach(k=>{ if(prev[k]!==undefined) obj[k]=prev[k]; });
+    ['historialResguardo','resguardoAnterior','etiqueta','tieneFoto','altaPorQR'].forEach(k=>{ if(prev[k]!==undefined) obj[k]=prev[k]; });
     try{
       if(!obj.historialResguardo) obj.historialResguardo=[];
       if((prev.estado||'')!==(obj.estado||'')) obj.historialResguardo.push({accion:'Cambio de estado', nombre:obj.resguardatario||'', fecha:_hoyISO(), de:prev.estado||'', estado:obj.estado||'', notas:'Editado desde Hardware'});
@@ -7328,6 +7357,19 @@ function saveHW(){
     logAudit('CREAR','HW',obj.desc||obj.inv,null,obj);hwData.push(obj);}
   _hwPDFsTemp=[];
   saveAll();closeModal('hwModal');renderHW();renderMetrics();renderFinancialSummary();checkAlertBanner();
+}
+
+// Foto tomada desde la etiqueta QR (se guarda aparte, en hwfotos/<folio>, fuera de /proesa para no hacer pesada la carga)
+function hwVerFotoQR(folio){
+  var w = window.open('', '_blank');
+  if(w) w.document.write('<p style="font-family:sans-serif">Cargando foto…</p>');
+  fbRestGet('/hwfotos/'+encodeURIComponent(folio)).then(function(f){
+    var src = f && (f.data || f);
+    if(!w) return;
+    if(typeof src==='string' && src.indexOf('data:image')===0){
+      w.document.body.innerHTML = '<img src="'+src+'" style="max-width:100%;height:auto"><p style="font-family:sans-serif">'+folio+'</p>';
+    } else { w.document.body.innerHTML = '<p style="font-family:sans-serif">No se encontró la foto de '+folio+'.</p>'; }
+  });
 }
 
 // SW
@@ -8046,7 +8088,7 @@ function deleteItem(tbl,id){
   if(_papelera.length>200) _papelera=_papelera.slice(0,200);
   savePapelera();
   logAudit('ELIMINAR',tbl.toUpperCase(),name,item,null);
-  if(tbl==='hw')hwData=hwData.filter(x=>x.id!==id);
+  if(tbl==='hw'){ try{ quitarActivoPublico(item); }catch(e){} hwData=hwData.filter(x=>x.id!==id); }
   else if(tbl==='sw')swData=swData.filter(x=>x.id!==id);
   else if(tbl==='ar')arData=arData.filter(x=>x.id!==id);
   else if(tbl==='sv')svData=svData.filter(x=>x.id!==id);
@@ -8085,22 +8127,25 @@ function exportCSV(){
 // ═══════════════════════════════════════════════
 // USUARIOS DEL SISTEMA
 // ═══════════════════════════════════════════════
-// Contraseñas personalizadas guardadas en localStorage (permite cambio de contraseña)
-const PASS_KEY='ps_passwords';
-function getUserPass(user){
-  try{ const m=JSON.parse(localStorage.getItem(PASS_KEY)||'{}'); return m[user]||null; }catch(e){return null;}
-}
-function setUserPass(user,pass){
-  try{ const m=JSON.parse(localStorage.getItem(PASS_KEY)||'{}'); m[user]=pass; localStorage.setItem(PASS_KEY,JSON.stringify(m)); }catch(e){}
-}
-
+// Las contraseñas YA NO están en el código: viven en Firebase Authentication.
+// Cada usuario entra con su nombre de usuario; internamente se convierte en
+// <usuario>@inventario.cxsmxs.tech (la cuenta que se crea en la consola de Firebase).
+const AUTH_DOMINIO = 'inventario.cxsmxs.tech';
 const SYS_USERS = [
-  {user:'admin',   pass:'Proesa2025!',  nombre:'Administrador',              rol:'admin'},
-  {user:'nancy',   pass:'Nancy2025',    nombre:'Nancy Sierra Torres',        rol:'usuario'},
-  {user:'emilio',  pass:'Emilio2025',   nombre:'Emilio Guerra Estevez',      rol:'usuario'},
-  {user:'yuritzia',pass:'Yuritzia2025', nombre:'Yuritzia Cortes Mena',       rol:'usuario'},
-  {user:'anapaula',pass:'AnaPaula2025', nombre:'Ana Paula Valero Miranda',   rol:'usuario'},
+  {user:'admin',    nombre:'Administrador',              rol:'admin'},
+  {user:'nancy',    nombre:'Nancy Sierra Torres',        rol:'usuario'},
+  {user:'emilio',   nombre:'Emilio Guerra Estevez',      rol:'usuario'},
+  {user:'yuritzia', nombre:'Yuritzia Cortes Mena',       rol:'usuario'},
+  {user:'anapaula', nombre:'Ana Paula Valero Miranda',   rol:'usuario'},
 ];
+function _correoDeUsuario(u){ u=(u||'').trim().toLowerCase(); return u.indexOf('@')>=0 ? u : (u+'@'+AUTH_DOMINIO); }
+function _usuarioDeCorreo(c){ c=(c||'').toLowerCase(); var u=c.split('@')[0]; return SYS_USERS.find(function(x){ return x.user===u; }) || {user:u, nombre:u, rol:'usuario'}; }
+function _fbAsegurarApp(){
+  if(typeof firebase==='undefined') return false;
+  if(!firebase.apps || !firebase.apps.length) firebase.initializeApp(fbCfg);
+  return true;
+}
+try{ localStorage.removeItem('ps_passwords'); }catch(e){}
 
 let _loginIntentos = 0;
 
@@ -8161,6 +8206,7 @@ function mostrarApp(){
 function cerrarSesion(){
   if(!confirm('¿Cerrar sesión?')) return;
   try{ sessionStorage.removeItem('proesa_user'); }catch(e){}
+  try{ if(typeof firebase!=='undefined' && firebase.auth) firebase.auth().signOut(); }catch(e){}
   document.getElementById('appContainer').style.display='none';
   document.getElementById('loginOverlay').style.display='flex';
   document.getElementById('luser').value='';
@@ -9820,32 +9866,37 @@ function doLogin(){
   if(!u||!p){showLError('Ingresa usuario y contraseña.');return;}
   const btn=document.getElementById('lbtn');
   btn.disabled=true; btn.textContent='Verificando...';
-  setTimeout(()=>{
-    const found=SYS_USERS.find(x=>x.user===u&&(getUserPass(x.user)||x.pass)===p);
-    if(found){
+  function fallo(msg){
+    _loginIntentos++;
+    btn.disabled=false; btn.textContent='Ingresar al sistema';
+    showLError(msg + (_loginIntentos>=3?' Intentos: '+_loginIntentos+'/5':''));
+    document.getElementById('lcard').classList.add('lshake');
+    setTimeout(()=>document.getElementById('lcard').classList.remove('lshake'),400);
+    document.getElementById('lpass').value='';
+    document.getElementById('lpass').focus();
+  }
+  cargarFirebaseSDK(function(){
+    try{ _fbAsegurarApp(); }catch(e){ fallo('No se pudo conectar. Revisa tu internet.'); return; }
+    firebase.auth().signInWithEmailAndPassword(_correoDeUsuario(u), p).then(function(cred){
+      const found=_usuarioDeCorreo(cred.user.email);
       sessionStorage.setItem('proesa_user',JSON.stringify({user:found.user,nombre:found.nombre,rol:found.rol,ts:Date.now()}));
-      // Ocultar login y mostrar app
       document.getElementById('loginOverlay').style.display='none';
       document.getElementById('appContainer').style.display='block';
       showHeaderUser();
-      // Renderizar con datos locales
       try{renderMetrics();}catch(e){}
       try{renderFinancialSummary();}catch(e){}
       try{renderHW();}catch(e){}
       try{checkAlertBanner();}catch(e){}
-      // Activar Firebase SDK automáticamente
-      setTimeout(function(){ try{ cargarFirebaseSDK(function(){ activarFirebase(); }); }catch(e){} }, 1000);
+      setTimeout(function(){ try{ activarFirebase(); }catch(e){} }, 300);
       setTimeout(autoCheckAndSend, 2500);
-    } else {
-      _loginIntentos++;
-      btn.disabled=false; btn.textContent='Ingresar al sistema';
-      showLError('Usuario o contraseña incorrectos.'+ (_loginIntentos>=3?' Intentos: '+_loginIntentos+'/5':''));
-      document.getElementById('lcard').classList.add('lshake');
-      setTimeout(()=>document.getElementById('lcard').classList.remove('lshake'),400);
-      document.getElementById('lpass').value='';
-      document.getElementById('lpass').focus();
-    }
-  },500);
+    }).catch(function(err){
+      var c=(err&&err.code)||'';
+      if(c==='auth/too-many-requests') fallo('Demasiados intentos. Espera unos minutos.');
+      else if(c==='auth/network-request-failed') fallo('Sin conexión a internet.');
+      else if(c==='auth/user-disabled') fallo('Este usuario está desactivado.');
+      else fallo('Usuario o contraseña incorrectos.');
+    });
+  });
 }
 
 // Limpiar error al escribir
@@ -9867,23 +9918,22 @@ function saveChangePass(){
   const confirm2=document.getElementById('cpConfirm').value;
   const errEl=document.getElementById('cpError');
   const showErr=(m)=>{ errEl.textContent=m; errEl.style.display='block'; };
-
-  // Obtener usuario actual de sesión
-  let sesion=null;
-  try{ sesion=JSON.parse(sessionStorage.getItem('proesa_user')); }catch(e){}
-  if(!sesion){ showErr('No hay sesión activa.'); return; }
-
-  const u=SYS_USERS.find(x=>x.user===sesion.user);
-  if(!u){ showErr('Usuario no encontrado.'); return; }
-
-  const passActualReal=getUserPass(u.user)||u.pass;
-  if(actual!==passActualReal){ showErr('La contraseña actual es incorrecta.'); return; }
-  if(nueva.length<6){ showErr('La nueva contraseña debe tener al menos 6 caracteres.'); return; }
+  if(nueva.length<8){ showErr('La nueva contraseña debe tener al menos 8 caracteres.'); return; }
   if(nueva!==confirm2){ showErr('Las contraseñas no coinciden.'); return; }
-
-  setUserPass(u.user, nueva);
-  closeModal('changePassModal');
-  showNotif('✅ Contraseña actualizada correctamente','green');
+  var user = (typeof firebase!=='undefined' && firebase.auth) ? firebase.auth().currentUser : null;
+  if(!user){ showErr('No hay sesión activa. Vuelve a iniciar sesión.'); return; }
+  var cred = firebase.auth.EmailAuthProvider.credential(user.email, actual);
+  user.reauthenticateWithCredential(cred).then(function(){
+    return user.updatePassword(nueva);
+  }).then(function(){
+    closeModal('changePassModal');
+    showNotif('✅ Contraseña actualizada correctamente','green');
+  }).catch(function(err){
+    var c=(err&&err.code)||'';
+    if(c==='auth/wrong-password'||c==='auth/invalid-credential'||c==='auth/invalid-login-credentials') showErr('La contraseña actual es incorrecta.');
+    else if(c==='auth/weak-password') showErr('La nueva contraseña es muy débil.');
+    else showErr('No se pudo cambiar la contraseña. Intenta de nuevo.');
+  });
 }
 
 // Mostrar nombre de usuario en header
@@ -15911,6 +15961,7 @@ function rb2ExcelIndividual(r){
       if(typeof gastosData!=='undefined' && window._fbReady && _fbListenersActive){
         clearInterval(iv);
         try{ migrarDepositos20Nov(); }catch(e){ console.error(e); }
+        try{ publicarActivosPublicos(); }catch(e){}
         if(aplicarPagosAGastos()) saveGastos();
       } else if(n>40){ clearInterval(iv); if(aplicarPagosAGastos()) { try{ localStorage.setItem('ps_gastos01', JSON.stringify(gastosData)); }catch(e){} } }
     }catch(e){ clearInterval(iv); }
