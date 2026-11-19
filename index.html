@@ -2625,7 +2625,8 @@ var _FOLIO_RE = /^(EC|ME)-\d{10}$/;
 function _folioDeBien(h){ if(!h) return ''; if(h.etiqueta && _FOLIO_RE.test(h.etiqueta)) return h.etiqueta; return _FOLIO_RE.test(h.inv||'') ? h.inv : ''; }
 function _fichaPublica(h){
   return {folio:_folioDeBien(h), desc:h.desc||'', clasif:h.clasif||'', marca:h.marca||'', modelo:h.modelo||'',
-    estado:h.estado||'', ubicacion:h.ubicacion||'', resguardatario:h.resguardatario||'', tieneFoto:!!h.tieneFoto, actualizado:Date.now()};
+    serie:h.serie||'', color:h.color||'', estado:h.estado||'', ubicacion:h.ubicacion||'', resguardatario:h.resguardatario||'',
+    area:h.area||'', resguardoDesde:h.fechaResguardo||'', tieneFoto:!!h.tieneFoto, actualizado:Date.now()};
 }
 function _fbRestPatch(path, data){
   return _fbGetToken().then(function(token){
@@ -7343,7 +7344,7 @@ function saveHW(){
     const prev=hwData[i];
     try{ _resgAsegurarHistorial(prev); }catch(e){}
     // Conservar campos que no están en el formulario (historial de resguardo, etc.)
-    ['historialResguardo','resguardoAnterior','etiqueta','tieneFoto','altaPorQR'].forEach(k=>{ if(prev[k]!==undefined) obj[k]=prev[k]; });
+    ['historialResguardo','resguardoAnterior','etiqueta','tieneFoto','altaPorQR','etiquetaAsignada','area','fechaResguardo'].forEach(k=>{ if(prev[k]!==undefined) obj[k]=prev[k]; });
     try{
       if(!obj.historialResguardo) obj.historialResguardo=[];
       if((prev.estado||'')!==(obj.estado||'')) obj.historialResguardo.push({accion:'Cambio de estado', nombre:obj.resguardatario||'', fecha:_hoyISO(), de:prev.estado||'', estado:obj.estado||'', notas:'Editado desde Hardware'});
