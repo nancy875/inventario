@@ -217,31 +217,34 @@ function vistaPublica(){
   try{ refHW.off(); }catch(e){}
   hwCargado=false;
   vista('<div class="spin"></div>');
-  db.ref('activosPublicos/'+FOLIO).once('value').then(function(s){
-    var b=s.val();
-    var boton='<button class="btn gray" onclick="pantallaLogin()">🔐 Personal autorizado: iniciar sesión</button>';
-    if(!b){ vista('<div class="card">'+encabezadoFolio()+'<div class="aviso">Esta etiqueta todavía no está registrada.</div>'+boton+'</div>'); return; }
-    vista('<div class="card">'+encabezadoFolio()+
-      '<h2>'+esc(b.desc||'Sin nombre')+'</h2><div class="muted">'+esc(b.clasif||'')+'</div>'+
-      '<div id="fotoBox"></div>'+
-      '<div style="margin-top:10px">'+
-        d('Marca / modelo',[b.marca,b.modelo].filter(function(x){return x&&x!=='N/A';}).join(' · '))+
-        d('No. de serie',b.serie)+d('Color',b.color)+d('Estado',b.estado)+d('Ubicación',b.ubicacion)+
-      '</div>'+
-      '<div class="resg"><div class="muted">Bajo resguardo de</div><div class="n">'+esc(b.resguardatario||'Sin asignar')+'</div>'+
-        '<div class="a">'+esc(b.area||'')+(b.resguardoDesde?' · desde '+fechaTxt(b.resguardoDesde):'')+'</div></div>'+
-      bloqueCodigos()+
-      '<p class="muted" style="margin-top:12px">Activo fijo propiedad de cosmos.ai. Si encuentras este bien fuera de su lugar, avisa al área de Administración.</p>'+
-      boton+'</div>');
-    pintarCodigos('cod-qr','cod-bc',92);
-    if(b.tieneFoto) cargarFoto();
-  }).catch(function(err){
-    var permiso = err && /permission/i.test(err.message||err.code||'');
-    vista('<div class="card">'+encabezadoFolio()+
-      '<p class="muted">'+(permiso?'La ficha pública de esta etiqueta todavía no está disponible.':'No se pudo consultar la etiqueta. Revisa tu conexión.')+'</p>'+
-      '<button class="btn gray" onclick="pantallaLogin()">🔐 Personal autorizado: iniciar sesión</button></div>');
-  });
+  db.ref('activosPublicos/'+FOLIO).once('value').then(function(s){ mostrarPublica(s.val(), null); })
+    .catch(function(err){ mostrarPublica(null, err); });
 }
+function mostrarPublica(b, err){
+  if(!b && FOLIO===FOLIO_EJEMPLO){ var e=datosEjemplo(); b={desc:e.desc,clasif:e.clasif,marca:e.marca,modelo:e.modelo,serie:e.serie,color:e.color,estado:e.estado,ubicacion:e.ubicacion,resguardatario:e.resguardatario,area:e.area,resguardoDesde:e.fechaResguardo}; err=null; }
+  var boton='<button class="btn gray" onclick="pantallaLogin()">🔐 Personal autorizado: iniciar sesión</button>';
+  if(err){
+    var permiso = /permission/i.test(err.message||err.code||'');
+    vista('<div class="card">'+encabezadoFolio()+'<p class="muted">'+(permiso?'La ficha pública de esta etiqueta todavía no está disponible.':'No se pudo consultar la etiqueta. Revisa tu conexión.')+'</p>'+boton+'</div>');
+    return;
+  }
+  if(!b){ vista('<div class="card">'+encabezadoFolio()+'<div class="aviso">Esta etiqueta todavía no está registrada.</div>'+boton+'</div>'); return; }
+  vista('<div class="card">'+encabezadoFolio()+
+    '<h2>'+esc(b.desc||'Sin nombre')+'</h2><div class="muted">'+esc(b.clasif||'')+'</div>'+
+    '<div id="fotoBox"></div>'+
+    '<div style="margin-top:10px">'+
+      d('Marca / modelo',[b.marca,b.modelo].filter(function(x){return x&&x!=='N/A';}).join(' · '))+
+      d('No. de serie',b.serie)+d('Color',b.color)+d('Estado',b.estado)+d('Ubicación',b.ubicacion)+
+    '</div>'+
+    '<div class="resg"><div class="muted">Bajo resguardo de</div><div class="n">'+esc(b.resguardatario||'Sin asignar')+'</div>'+
+      '<div class="a">'+esc(b.area||'')+(b.resguardoDesde?' · desde '+fechaTxt(b.resguardoDesde):'')+'</div></div>'+
+    bloqueCodigos()+
+    '<p class="muted" style="margin-top:12px">Activo fijo propiedad de cosmos.ai. Si encuentras este bien fuera de su lugar, avisa al área de Administración.</p>'+
+    boton+'</div>');
+  pintarCodigos('cod-qr','cod-bc',92);
+  if(b.tieneFoto) cargarFoto();
+}
+
 function cargarFoto(cb){
   var box=$('fotoBox'); if(box) box.innerHTML='<div class="spin"></div>';
   db.ref('hwfotos/'+FOLIO).once('value').then(function(s){
@@ -283,7 +286,7 @@ function cargar(){
   }, function(){ vista('<div class="card"><h2>Sin acceso</h2><p class="muted">No se pudo leer el inventario. Verifica que tu usuario esté autorizado.</p></div>'); });
 }
 function buscarBien(){ return hwLista.find(function(h){ return h && (h.etiqueta===FOLIO || h.inv===FOLIO); }) || null; }
-function decidir(msgOk){ bien = buscarBien(); if(bien) verFicha(msgOk); else sinRegistro(); }
+function decidir(msgOk){ bien = buscarBien(); if(!bien && FOLIO===FOLIO_EJEMPLO) bien = datosEjemplo(); if(bien) verFicha(msgOk); else sinRegistro(); }
 
 function verFicha(msgOk){
   var b=bien, per=periodosResguardo(b), act=per.length&&!per[per.length-1].hasta?per[per.length-1]:null;
@@ -318,7 +321,6 @@ function verFicha(msgOk){
 function sinRegistro(){
   vista('<div class="card">'+encabezadoFolio()+
     '<div class="aviso">Esta etiqueta todavía no está asignada a ningún bien.</div>'+bloqueCodigos()+
-    (FOLIO===FOLIO_EJEMPLO?'<button class="btn pri" onclick="cargarEjemplo()">📦 Cargar ficha de ejemplo</button><p class="muted">Etiqueta de demostración: crea un bien de ejemplo ya lleno, con historial, para mostrar cómo se ve.</p>':'')+
     '<button class="btn pri" onclick="formulario(false)">➕ Registrar un bien nuevo</button>'+
     '<button class="btn sec" onclick="ligarExistente()">🔗 Ligar a un bien ya registrado</button>'+
     '<p class="muted" style="margin-top:12px">Usa "Ligar" cuando el equipo ya está en el sistema con otro número (por ejemplo cosmos_Eq_001) y solo le vas a pegar esta etiqueta.</p>'+
@@ -357,22 +359,30 @@ function confirmarLigar(id){
 
 // ─── Ficha de ejemplo para demostraciones (solo etiqueta ME-0000000000) ─────
 var FOLIO_EJEMPLO = 'ME-0000000000';
+// Datos del bien de ejemplo: se muestran aunque todavía no esté guardado en la base de datos
+function datosEjemplo(){
+  return {id:1000000000001, inv:FOLIO_EJEMPLO, etiqueta:FOLIO_EJEMPLO, documentos:[], ejemplo:true,
+    desc:'Silla ejecutiva ergonómica', clasif:'Mobiliario y equipo de oficina', serie:'SE-2026-0457', marca:'Ofiplus', modelo:'Ergo Pro',
+    color:'Negro', estado:'Bueno', ubicacion:'Oficina Toluca, piso 2, Dirección General', fecha:'2026-02-10', factura:'F-10234', proveedor:'Ofiplus México',
+    especif:'Respaldo de malla, soporte lumbar, descansabrazos ajustables', obs:'BIEN DE EJEMPLO para demostración del sistema',
+    resguardatario:'Emilio Guerra-Estévez', area:'Dirección General', fechaResguardo:'2026-09-01',
+    historialResguardo:[
+      {accion:'Asignado', nombre:'Israel Vázquez Hernández', area:'Legal', fecha:'2026-02-10', notas:'Alta del bien'},
+      {accion:'Liberado', nombre:'Israel Vázquez Hernández', area:'Legal', fecha:'2026-08-31', motivo:'Reasignación de equipo', notas:'Se le asignó otra silla'},
+      {accion:'Asignado', nombre:'Emilio Guerra-Estévez', area:'Dirección General', fecha:'2026-09-01', notas:''}
+    ]};
+}
+// Si el ejemplo aún no está guardado y alguien lo edita, primero se guarda tal cual
+function asegurarEjemplo(arr, id){
+  var i=arr.findIndex(function(x){ return x && x.id===id; });
+  if(i<0 && FOLIO===FOLIO_EJEMPLO && !arr.some(function(x){ return x && (x.etiqueta===FOLIO||x.inv===FOLIO); })){
+    var e=datosEjemplo(); e.altaPorQR={por:usuarioNombre, fecha:hoy()}; arr.push(e); i=arr.length-1;
+  }
+  return i;
+}
 function cargarEjemplo(){
   if(FOLIO!==FOLIO_EJEMPLO) return;
-  if(!confirm('¿Crear la ficha de ejemplo para la etiqueta '+FOLIO+'? Después la puedes borrar desde la pestaña Hardware.')) return;
-  guardarEnInventario(function(arr){
-    if(arr.some(function(x){ return x && (x.etiqueta===FOLIO || x.inv===FOLIO); })) return 'La ficha de ejemplo ya existe.';
-    arr.push({id:Date.now(), inv:FOLIO, etiqueta:FOLIO, documentos:[], ejemplo:true, altaPorQR:{por:usuarioNombre, fecha:hoy()},
-      desc:'Silla ejecutiva ergonómica', clasif:'Mobiliario y equipo de oficina', serie:'SE-2026-0457', marca:'Ofiplus', modelo:'Ergo Pro',
-      color:'Negro', estado:'Bueno', ubicacion:'Oficina Toluca, piso 2, Dirección General', fecha:'2026-02-10', factura:'F-10234', proveedor:'Ofiplus México',
-      especif:'Respaldo de malla, soporte lumbar, descansabrazos ajustables', obs:'BIEN DE EJEMPLO para demostración del sistema',
-      resguardatario:'Emilio Guerra-Estévez', area:'Dirección General', fechaResguardo:'2026-09-01',
-      historialResguardo:[
-        {accion:'Asignado', nombre:'Israel Vázquez Hernández', area:'Legal', fecha:'2026-02-10', notas:'Alta del bien', por:usuarioNombre, registrado:hoy()},
-        {accion:'Liberado', nombre:'Israel Vázquez Hernández', area:'Legal', fecha:'2026-08-31', motivo:'Reasignación de equipo', notas:'Se le asignó otra silla', por:usuarioNombre, registrado:hoy()},
-        {accion:'Asignado', nombre:'Emilio Guerra-Estévez', area:'Dirección General', fecha:'2026-09-01', notas:'', por:usuarioNombre, registrado:hoy()}
-      ]});
-  }, 'Ficha de ejemplo creada. Ya se puede escanear para verla.');
+  guardarEnInventario(function(arr){ asegurarEjemplo(arr, -1); }, 'Ficha de ejemplo guardada en el sistema.');
 }
 
 // ─── Formulario de alta / edición ────────────────────────────────────────────
@@ -469,7 +479,7 @@ function guardarEdicion(){
   if(!o.serie) return mostrarErr('ferr','Falta el número de serie (si no tiene, escribe S/N).');
   var foto=fotoNueva, id=bien.id;
   guardarEnInventario(function(arr){
-    var i=arr.findIndex(function(x){ return x && x.id===id; }); if(i<0) return 'El bien ya no existe en el inventario.';
+    var i=asegurarEjemplo(arr, id); if(i<0) return 'El bien ya no existe en el inventario.';
     var prev=arr[i];
     if((prev.estado||'')!==(o.estado||'')){
       prev.historialResguardo=(prev.historialResguardo||[]).concat([{accion:'Cambio de estado', nombre:prev.resguardatario||'', fecha:hoy(), de:prev.estado||'', estado:o.estado, notas:'Editado desde etiqueta QR', por:usuarioNombre}]);
@@ -506,7 +516,7 @@ function guardarCambioResguardo(){
   if(act && act.desde && f<act.desde) return mostrarErr('ferr','La fecha del cambio no puede ser anterior al inicio del resguardo actual ('+fechaTxt(act.desde)+').');
   var id=bien.id;
   guardarEnInventario(function(arr){
-    var i=arr.findIndex(function(x){ return x && x.id===id; }); if(i<0) return 'El bien ya no existe en el inventario.';
+    var i=asegurarEjemplo(arr, id); if(i<0) return 'El bien ya no existe en el inventario.';
     var p=arr[i], h=(p.historialResguardo||[]).slice();
     if(!h.length && p.resguardatario) h.push({accion:'Asignado', nombre:p.resguardatario, area:p.area||'', fecha:p.fechaResguardo||p.fecha||'', notas:'Resguardo previo al historial', por:usuarioNombre, registrado:hoy()});
     if(p.resguardatario) h.push({accion:'Liberado', nombre:p.resguardatario, area:p.area||'', fecha:f, motivo:mot, notas:nota, estado:p.estado||'', por:usuarioNombre, registrado:hoy()});
