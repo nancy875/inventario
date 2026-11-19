@@ -1183,9 +1183,8 @@ window.onerror = function(msg, src, line, col, err){
         <div class="form-group"><label>Proveedor</label><input type="text" id="hw-proveedor"></div>
         <div class="form-group"><label>Fecha de ingreso</label><input type="date" id="hw-fecha"></div>
         <div class="form-group"><label>Ubicación</label>
-          <select class="form-sel" id="hw-ubicacion">
-            <option>Oficina Toluca</option><option>Oficina CDMX</option><option>Otro</option>
-          </select>
+          <input type="text" id="hw-ubicacion" list="hw-ubicacion-lista" placeholder="Escribe la ubicación real (ej. Oficina Toluca, piso 2)">
+          <datalist id="hw-ubicacion-lista"></datalist>
         </div>
         <div class="form-group">
           <label>Resguardatario</label>
@@ -4597,6 +4596,50 @@ function sort(tbl,key){
 // ══════════════════════════════════════════════
 // FICHA INDIVIDUAL DE HARDWARE
 // ══════════════════════════════════════════════
+
+// ── Ayudantes de la ficha de resguardo (mismo formato que activo.html) ──
+function _hwFechaTxt(f){ if(!f) return '—'; var p=String(f).split('-'); if(p.length!==3) return f; var m=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; return parseInt(p[2],10)+' '+m[parseInt(p[1],10)-1]+' '+p[0]; }
+function _hwPeriodosResguardo(b){
+  var per=[];
+  (b.historialResguardo||[]).forEach(function(e){
+    if(!e) return;
+    if(e.accion==='Asignado') per.push({nombre:e.nombre||'', area:e.area||'', desde:e.fecha||'', hasta:'', motivo:'', nota:''});
+    else if(e.accion==='Liberado'){
+      for(var i=per.length-1;i>=0;i--){ if(!per[i].hasta && (!e.nombre || per[i].nombre===e.nombre)){ per[i].hasta=e.fecha||''; per[i].motivo=e.motivo||''; per[i].nota=e.notas||''; break; } }
+    }
+  });
+  if(!per.length && b.resguardatario) per.push({nombre:b.resguardatario, area:b.area||'', desde:b.fechaResguardo||b.fecha||'', hasta:'', motivo:'', nota:''});
+  per.forEach(function(p){ if(!p.area){ try{ var x=buscarPersonaEquipo(p.nombre); if(x&&x.area) p.area=x.area; }catch(e){} } });
+  return per;
+}
+function _hwCargarScript(src){
+  return new Promise(function(res,rej){
+    if(document.querySelector('script[data-src="'+src+'"]')){ res(); return; }
+    var sc=document.createElement('script'); sc.src=src; sc.setAttribute('data-src',src); sc.onload=res; sc.onerror=rej; document.head.appendChild(sc);
+  });
+}
+function _hwFichaCodigosYFoto(h, folio){
+  if(folio){
+    Promise.all([
+      _hwCargarScript('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'),
+      _hwCargarScript('https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js')
+    ]).then(function(){
+      var url='https://nancy875.github.io/inventario/activo.html?inv='+folio;
+      var q=document.getElementById('hwf-qr');
+      if(q){ q.innerHTML=''; var tmp=document.createElement('div'); new QRCode(tmp,{text:url,width:192,height:192,correctLevel:QRCode.CorrectLevel.M});
+        setTimeout(function(){ var cv=tmp.querySelector('canvas'); var src=cv?cv.toDataURL('image/png'):(tmp.querySelector('img')||{}).src; if(src) q.innerHTML='<img src="'+src+'" style="width:96px;height:96px;display:block">'; },60); }
+      var s=document.getElementById('hwf-bc-svg');
+      if(s) JsBarcode(s, folio, {format:'CODE128', displayValue:true, font:'Arial', fontSize:13, height:44, margin:0, textMargin:2});
+    }).catch(function(){});
+    if(h.tieneFoto){
+      fbRestGet('/hwfotos/'+encodeURIComponent(folio)).then(function(f){
+        var src=f&&(f.data||f); var box=document.getElementById('hwf-foto');
+        if(box && typeof src==='string' && src.indexOf('data:image')===0) box.innerHTML='<img src="'+src+'" style="max-height:220px;max-width:300px;border:1px solid #bbb;margin-top:8px">';
+      });
+    }
+  }
+}
+
 function verFichaHW(id){
   const h = hwData.find(x=>x.id===id); if(!h) return;
   const eCls={Nuevo:'#1a7a4a',Bueno:'#0A5695','De uso':'#6b6960',Dañado:'#c0392b'};
@@ -4608,107 +4651,51 @@ function verFichaHW(id){
     : {bg:'#f0f0f0',color:'#666'};
   const fecha = new Date().toLocaleDateString('es-MX',{year:'numeric',month:'long',day:'numeric'});
 
+  // ── Mismo formato que la ficha de la etiqueta QR (activo.html) ──
+  const folioQR = (typeof _folioDeBien==='function') ? _folioDeBien(h) : '';
+  const per = _hwPeriodosResguardo(h);
+  const act = per.length && !per[per.length-1].hasta ? per[per.length-1] : null;
+  const areaAct = h.area || (act&&act.area) || ((typeof buscarPersonaEquipo==='function' && buscarPersonaEquipo(h.resguardatario)||{}).area) || '';
+  const esc = function(t){ return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); };
+  const fila = function(et,v){ return '<tr><td style="border:1px solid #bbb;padding:5px 7px;background:#F4F5F8;color:#555;width:26%;font-weight:700">'+et+'</td><td style="border:1px solid #bbb;padding:5px 7px">'+esc(v||'—')+'</td></tr>'; };
+  const sec = function(t){ return '<div style="font-size:12px;font-weight:700;color:#fff;background:#02255d;padding:5px 9px;margin:14px 0 0;text-transform:uppercase;letter-spacing:.5px">'+t+'</div>'; };
+  const tab = function(rows){ return '<table style="width:100%;border-collapse:collapse;font-size:12px">'+rows+'</table>'; };
+  const th = function(t){ return '<th style="border:1px solid #bbb;padding:5px 7px;background:#E9EDF4;color:#02255d;text-align:left">'+t+'</th>'; };
+  const td = function(t){ return '<td style="border:1px solid #bbb;padding:5px 7px">'+t+'</td>'; };
+  const histRows = per.map(function(p,k){
+    return '<tr>'+td(k+1)+td(esc(p.nombre||'—'))+td(esc(p.area||'—'))+td(_hwFechaTxt(p.desde))+td(p.hasta?_hwFechaTxt(p.hasta):'<b>Actual</b>')+td(esc([p.motivo,p.nota].filter(Boolean).join(': ')||'—'))+'</tr>';
+  }).join('') || '<tr><td colspan="6" style="border:1px solid #bbb;padding:5px 7px">Sin movimientos registrados.</td></tr>';
   const html = `
-  <div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto">
-
-    <!-- ENCABEZADO CON LOGO -->
-    <div style="font-family:'DM Sans',sans-serif;background:#fff;border-radius:8px 8px 0 0;border:1px solid #e0e0e0;border-bottom:none;overflow:hidden">
-      <!-- Franja superior azul -->
-      <div style="background:#0A5695;height:5px;width:100%"></div>
-      <!-- Logo + empresa -->
-      <div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e8e8e8">
-        <div style="display:flex;align-items:center;gap:14px">
-          <img src="${COSMOS_LOGO_B64}" alt="cosmos.ai" style="height:30px">
-          <div>
-            <div style="font-size:10px;color:#999;letter-spacing:.04em;margin-top:2px">Control de Inventario de Activos</div>
-          </div>
-        </div>
-        <div style="text-align:right">
-          <div style="background:#f0f4fb;border:1px solid #c0d4f0;border-radius:6px;padding:8px 14px">
-            <div style="font-size:9px;color:#0A5695;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">No. Inventario</div>
-            <div style="font-size:16px;font-weight:700;color:#0A5695;letter-spacing:.05em;font-family:'Courier New',monospace">${h.inv}</div>
-          </div>
-        </div>
-      </div>
-      <!-- Título del bien -->
-      <div style="padding:12px 24px;background:#f7f9ff;border-bottom:1px solid #e8e8e8">
-        <div style="font-size:10px;text-transform:uppercase;color:#0A5695;font-weight:600;letter-spacing:.08em;margin-bottom:3px">Ficha de Resguardo</div>
-        <div style="font-size:19px;font-weight:700;color:#1a1a1a">${h.desc}</div>
-        <div style="font-size:13px;color:#666;margin-top:2px">${h.marca||''}${h.modelo&&h.modelo!=='N/A'?' — '+h.modelo:''}</div>
-      </div>
+  <div style="font-family:Arial,sans-serif;max-width:720px;margin:0 auto;color:#111;background:#fff;padding:6px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #02255d;padding-bottom:8px">
+      <img src="${COSMOS_LOGO_B64}" alt="cosmos.ai" style="height:42px">
+      <div style="text-align:right"><div style="font-size:19px;font-weight:700;color:#02255d">Ficha de resguardo de activo fijo</div><div style="font-size:11px;color:#555">Administración y Control Interno</div></div>
     </div>
-    <!-- CUERPO -->
-    <div style="font-family:'DM Sans',sans-serif;background:#fff;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;padding:20px 24px">
-
-      <!-- Estado badge -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
-        <span style="background:${eColor};color:#fff;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600">${h.estado}</span>
-        <span style="background:${cc.bg};color:${cc.color};padding:4px 14px;border-radius:20px;font-size:12px">${h.clasif}</span>
-        ${h.color?`<span style="background:#f0f0f0;color:#666;padding:4px 14px;border-radius:20px;font-size:12px">${h.color}</span>`:''}
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:12px;color:#444">${folioQR?'Código de etiqueta':'No. de inventario'}</div>
+        <div style="font-family:Consolas,'Courier New',monospace;font-size:26px;font-weight:700;color:#02255d">${esc(folioQR||h.inv)}</div>
+        ${folioQR && h.inv && h.inv!==folioQR ? '<div style="font-size:12px;color:#444">No. de inventario anterior: '+esc(h.inv)+'</div>' : ''}
+        ${folioQR ? '' : '<div style="font-size:11px;color:#A05C00;margin-top:3px">Etiqueta con QR pendiente de asignar</div>'}
       </div>
-
-      <!-- Grid de datos -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;margin-bottom:16px">
-
-        <div style="padding:10px 14px;border-bottom:1px solid #e8e8e8;border-right:1px solid #e8e8e8">
-          <div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:600;letter-spacing:.06em;margin-bottom:3px">Marca</div>
-          <div style="font-size:14px;font-weight:500;color:#333">${h.marca||'—'}</div>
-        </div>
-        <div style="padding:10px 14px;border-bottom:1px solid #e8e8e8">
-          <div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:600;letter-spacing:.06em;margin-bottom:3px">Modelo</div>
-          <div style="font-size:14px;font-weight:500;color:#333">${h.modelo&&h.modelo!=='N/A'?h.modelo:'—'}</div>
-        </div>
-
-        <div style="padding:10px 14px;border-bottom:1px solid #e8e8e8;border-right:1px solid #e8e8e8">
-          <div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:600;letter-spacing:.06em;margin-bottom:3px">No. Serie</div>
-          <div style="font-size:13px;font-weight:500;color:#333;font-family:'Courier New',monospace">${h.serie&&h.serie!=='N/A'?h.serie:'—'}</div>
-        </div>
-        <div style="padding:10px 14px;border-bottom:1px solid #e8e8e8">
-          <div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:600;letter-spacing:.06em;margin-bottom:3px">No. Factura</div>
-          <div style="font-size:13px;font-weight:500;color:#333;font-family:'Courier New',monospace">${h.factura&&h.factura!=='N/A'?h.factura:'—'}</div>
-        </div>
-
-        <div style="padding:10px 14px;border-bottom:1px solid #e8e8e8;border-right:1px solid #e8e8e8">
-          <div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:600;letter-spacing:.06em;margin-bottom:3px">Ubicación</div>
-          <div style="font-size:14px;font-weight:500;color:#333">${h.ubicacion||'—'}</div>
-        </div>
-        <div style="padding:10px 14px;border-bottom:1px solid #e8e8e8">
-          <div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:600;letter-spacing:.06em;margin-bottom:3px">Fecha de adquisición</div>
-          <div style="font-size:14px;font-weight:500;color:#333">${h.fecha||'—'}</div>
-        </div>
-
-        <div style="padding:10px 14px;border-right:1px solid #e8e8e8;grid-column:span 2">
-          <div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:600;letter-spacing:.06em;margin-bottom:3px">Resguardatario</div>
-          <div style="font-size:15px;font-weight:600;color:#0A5695">${h.resguardatario||'Sin asignar'}</div>
-        </div>
-      </div>
-
-      ${h.obs?`
-      <div style="background:#f8f8f8;border-left:3px solid #0A5695;padding:10px 14px;border-radius:0 6px 6px 0;margin-bottom:16px">
-        <div style="font-size:10px;text-transform:uppercase;color:#999;font-weight:600;margin-bottom:4px">Observaciones</div>
-        <div style="font-size:13px;color:#444">${h.obs}</div>
-      </div>`:''}
-
-      <!-- Firma -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;padding-top:16px;border-top:1px dashed #ddd">
-        <div style="text-align:center">
-          <div style="height:50px;border-bottom:1px solid #999;margin-bottom:6px"></div>
-          <div style="font-size:11px;color:#666">Resguardatario</div>
-          <div style="font-size:12px;font-weight:600;color:#333;margin-top:2px">${h.resguardatario||'___________________'}</div>
-        </div>
-        <div style="text-align:center">
-          <div style="height:50px;border-bottom:1px solid #999;margin-bottom:6px"></div>
-          <div style="font-size:11px;color:#666">Administración</div>
-          <div style="font-size:12px;font-weight:600;color:#333;margin-top:2px">PRONOSTICO Y ESTRATEGIA S.A. DE C.V.</div>
-        </div>
-      </div>
-
-      <!-- Pie -->
-      <div style="margin-top:16px;padding-top:12px;border-top:1px solid #eee;display:flex;justify-content:space-between;font-size:10px;color:#aaa">
-        <span>PRONOSTICO Y ESTRATEGIA S.A. DE C.V.</span>
-        <span>Generado el ${fecha}</span>
-        <span>Inventario No. ${h.inv}</span>
-      </div>
+      ${folioQR ? '<div style="display:flex;align-items:center;gap:12px"><div id="hwf-bc"><svg id="hwf-bc-svg"></svg></div><div id="hwf-qr" style="width:96px;height:96px"></div></div>' : ''}
+    </div>
+    ${sec('Datos generales del bien')}${tab(
+      fila('Nombre del equipo',h.desc)+fila('Clasificación',h.clasif)+fila('No. de serie',h.serie)+
+      fila('Marca / modelo',[h.marca,h.modelo].filter(function(x){return x&&x!=='N/A';}).join(' · '))+fila('Color',h.color)+fila('Estado',h.estado)+
+      fila('Ubicación',h.ubicacion)+fila('Fecha de ingreso',_hwFechaTxt(h.fecha))+
+      (h.factura&&h.factura!=='N/A'?fila('No. de factura',h.factura):'')+(h.proveedor&&h.proveedor!=='N/A'?fila('Proveedor',h.proveedor):'')+
+      (h.especif?fila('Especificaciones',h.especif):'')+(h.obs?fila('Observaciones',h.obs):''))}
+    <div id="hwf-foto"></div>
+    ${sec('Resguardo actual')}${tab(fila('Resguardatario',h.resguardatario||'Sin asignar')+fila('Área',areaAct)+fila('Desde',act?_hwFechaTxt(act.desde):'—'))}
+    ${sec('Historial de resguardo')}<table style="width:100%;border-collapse:collapse;font-size:12px"><tr>${th('#')}${th('Resguardatario')}${th('Área')}${th('Desde')}${th('Hasta')}${th('Motivo de término')}</tr>${histRows}</table>
+    <p style="font-size:11.5px;margin-top:10px">El resguardatario se compromete a hacer buen uso del bien descrito, a conservarlo en buen estado y a devolverlo cuando le sea requerido o al terminar su relación laboral con la empresa.</p>
+    <div style="display:flex;gap:30px;margin-top:60px">
+      <div style="flex:1;text-align:center;font-size:12px;border-top:1px solid #111;padding-top:5px">Entrega<br><b>Administración y Control Interno</b></div>
+      <div style="flex:1;text-align:center;font-size:12px;border-top:1px solid #111;padding-top:5px">Recibe<br><b>${esc(h.resguardatario||'')}</b></div>
+    </div>
+    <div style="margin-top:26px;font-size:10px;color:#666;border-top:1px solid #ccc;padding-top:5px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <span>cosmos.ai · PRONOSTICO Y ESTRATEGIA S.A. DE C.V.</span><span>Activo fijo ${esc(folioQR||h.inv)}</span><span>Generado el ${fecha}</span>
     </div>
   </div>`;
 
@@ -4728,6 +4715,7 @@ function verFichaHW(id){
     </div>`;
 
   document.getElementById('fichaHWModal').classList.add('open');
+  try{ _hwFichaCodigosYFoto(h, folioQR); }catch(e){}
 }
 
 function imprimirFichaHW(id){
@@ -7129,7 +7117,9 @@ function openModal(id=null){
   document.getElementById('hw-resguardatario').innerHTML = opcionesPersonaEquipo('');
   hwFields.forEach(f=>{const el=document.getElementById('hw-'+f);if(el)el.value='';});
   document.getElementById('hw-estado').value='Nuevo';
-  document.getElementById('hw-ubicacion').value='Oficina Toluca';
+  document.getElementById('hw-ubicacion').value='';
+  try{ var _ub={}; ['Oficina Toluca','Oficina CDMX'].concat((hwData||[]).map(function(x){return x.ubicacion;})).forEach(function(u){ if(u&&u!=='Otro') _ub[u]=1; });
+       document.getElementById('hw-ubicacion-lista').innerHTML=Object.keys(_ub).sort().map(function(u){return '<option value="'+String(u).replace(/"/g,'&quot;')+'">';}).join(''); }catch(e){}
   document.getElementById('hw-clasif').value='Equipo de Cómputo';
   if(id){const h=hwData.find(x=>x.id===id);if(!h)return;document.getElementById('hwModalTitle').textContent='Editar bien';document.getElementById('hw-resguardatario').innerHTML=opcionesPersonaEquipo(h.resguardatario||'');hwFields.forEach(f=>{const el=document.getElementById('hw-'+f);if(el&&h[f]!==undefined)el.value=h[f];});_hwPDFsTemp=(h.documentos||[]).map(function(d){return Object.assign({},d);});}
   else{document.getElementById('hwModalTitle').textContent='Agregar bien';_hwPDFsTemp=[];}

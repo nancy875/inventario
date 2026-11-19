@@ -122,7 +122,27 @@ var USUARIOS_QR = {
 };
 var CLASIF = { EC:['Equipo de Cómputo','Equipo de Cómputo y Periféricos'], ME:['Mobiliario y equipo de oficina'] };
 var ESTADOS = ['Nuevo','Bueno','De uso','Dañado'];
-var UBICACIONES = ['Oficina Toluca','Oficina CDMX','Otro'];
+function datalistUbic(){
+  var v={'Oficina Toluca':1,'Oficina CDMX':1};
+  hwLista.forEach(function(h){ if(h && h.ubicacion && h.ubicacion!=='Otro') v[h.ubicacion]=1; });
+  return '<datalist id="dl-ubic">'+Object.keys(v).sort().map(function(x){return '<option value="'+esc(x)+'">';}).join('')+'</datalist>';
+}
+// Equipo activo de cosmos.ai (para sugerir nombre y llenar el área automáticamente)
+var EQUIPO = [
+  {n:'Emilio Guerra-Estévez', a:'Dirección General'},
+  {n:'Ana Paula Valero Miranda', a:'Dirección General'},
+  {n:'Eduardo Torres Urzúa', a:'Dirección de Producto'},
+  {n:'José Patricio Hijuit Cuatlayo', a:'Desarrollo de Producto'},
+  {n:'Nancy Sierra Torres', a:'Administración y Control Interno'},
+  {n:'Enrique Alonso Pineda', a:'Cumplimiento'},
+  {n:'Yuritzia Cortés Mena', a:'Finanzas'},
+  {n:'Israel Vázquez Hernández', a:'Legal'}
+];
+function areaDe(nombre){ var p=EQUIPO.find(function(x){ return x.n.toLowerCase()===String(nombre||'').trim().toLowerCase(); }); return p?p.a:''; }
+function autoArea(idNombre, idArea){
+  var a=areaDe($(idNombre).value), el=$(idArea);
+  if(a && (!el.value || el.dataset.auto==='1')){ el.value=a; el.dataset.auto='1'; }
+}
 var MOTIVOS = ['Baja del colaborador','Cambio de área','Reasignación de equipo','Envío a reparación o mantenimiento','Devolución a almacén','Otro'];
 
 firebase.initializeApp(FB_CFG);
@@ -143,7 +163,10 @@ function encabezadoFolio(){ return '<div class="folio"><span class="pill '+PREFI
 function d(et,v){ return '<div class="dato"><span>'+et+'</span><span>'+esc(v||'—')+'</span></div>'; }
 function mostrarErr(id,m){ var e=$(id); if(e){ e.textContent=m; e.style.display='block'; e.scrollIntoView({block:'center'}); } }
 function datalist(id, campo){
-  var vals={}; hwLista.forEach(function(h){
+  var vals={};
+  if(campo==='resguardatario') EQUIPO.forEach(function(p){ vals[p.n]=1; });
+  if(campo==='area') EQUIPO.forEach(function(p){ vals[p.a]=1; });
+  hwLista.forEach(function(h){
     if(h && h[campo]) vals[h[campo]]=1;
     (h && h.historialResguardo||[]).forEach(function(e){ if(campo==='resguardatario' && e.nombre) vals[e.nombre]=1; if(campo==='area' && e.area) vals[e.area]=1; });
   });
@@ -340,8 +363,8 @@ function formulario(editar){
   var resgHTML = editar
     ? '<div class="resg"><div class="muted">Resguardatario actual</div><div class="n">'+esc(b.resguardatario||'Sin asignar')+'</div><div class="a">'+esc(b.area||'')+'</div>'+
       '<div class="muted" style="margin-top:6px">Para cambiarlo usa “Cambiar resguardatario”, así queda en el historial con sus fechas.</div></div>'
-    : '<label>Resguardatario <span class="req">*</span></label><input id="f-resguardatario" list="dl-resg" value="'+esc(b.resguardatario)+'" placeholder="Nombre completo de la persona">'+datalist('dl-resg','resguardatario')+
-      '<label>Área <span class="req">*</span></label><input id="f-area" list="dl-area" value="'+esc(b.area)+'" placeholder="Área a la que pertenece">'+datalist('dl-area','area')+
+    : '<label>Resguardatario <span class="req">*</span></label><input id="f-resguardatario" list="dl-resg" value="'+esc(b.resguardatario)+'" placeholder="Nombre completo de la persona" oninput="autoArea(\'f-resguardatario\',\'f-area\')">'+datalist('dl-resg','resguardatario')+
+      '<label>Área <span class="req">*</span></label><input id="f-area" list="dl-area" value="'+esc(b.area)+'" placeholder="Se llena sola si la persona es del equipo" oninput="this.dataset.auto=\'\'">'+datalist('dl-area','area')+
       '<label>Fecha de asignación <span class="req">*</span></label><input id="f-fechaResguardo" type="date" value="'+esc(b.fechaResguardo||hoy())+'">';
   vista('<div class="card">'+encabezadoFolio()+
     '<h2>'+(editar?'Editar datos del bien':'Registrar bien nuevo')+'</h2>'+
@@ -352,11 +375,17 @@ function formulario(editar){
     '<label>Clasificación <span class="req">*</span></label><select id="f-clasif">'+opciones(clasifs,b.clasif)+'</select>'+
     '<div class="fila"><div><label>Marca</label><input id="f-marca" value="'+esc(b.marca)+'"></div><div><label>Modelo</label><input id="f-modelo" value="'+esc(b.modelo)+'"></div></div>'+
     '<div class="fila"><div><label>Color</label><input id="f-color" value="'+esc(b.color)+'"></div><div><label>Estado <span class="req">*</span></label><select id="f-estado">'+opciones(ESTADOS,b.estado||'Nuevo')+'</select></div></div>'+
-    '<div class="fila"><div><label>Ubicación</label><select id="f-ubicacion">'+opciones(UBICACIONES,b.ubicacion||'Oficina Toluca')+'</select></div><div><label>Fecha de ingreso</label><input id="f-fecha" type="date" value="'+esc(b.fecha||hoy())+'"></div></div>'+
-    '<div class="fila"><div><label>No. de factura</label><input id="f-factura" value="'+esc(b.factura)+'"></div><div><label>Proveedor</label><input id="f-proveedor" value="'+esc(b.proveedor)+'"></div></div>'+
+    '<label>Ubicación <span class="req">*</span></label><input id="f-ubicacion" list="dl-ubic" value="'+esc(b.ubicacion==='Otro'?'':b.ubicacion)+'" placeholder="Ej. Oficina Toluca, piso 2, Dirección">'+datalistUbic()+
+    '<div class="fila"><div><label>Fecha de ingreso</label><input id="f-fecha" type="date" value="'+esc(b.fecha||hoy())+'"></div><div><label>No. de factura</label><input id="f-factura" value="'+esc(b.factura)+'"></div></div>'+
+    '<label>Proveedor</label><input id="f-proveedor" value="'+esc(b.proveedor)+'">'+
     '<label>Especificaciones</label><textarea id="f-especif">'+esc(b.especif)+'</textarea>'+
     '<label>Observaciones</label><textarea id="f-obs">'+esc(b.obs)+'</textarea>'+
-    '<label>Foto del bien</label><input id="f-foto" type="file" accept="image/*" capture="environment" onchange="leerFoto(this)">'+
+    '<label>Foto del bien</label>'+
+    '<div class="fila"><div><button type="button" class="btn sec" style="margin-top:0" onclick="$(\'f-foto-cam\').click()">📷 Tomar foto</button></div>'+
+    '<div><button type="button" class="btn sec" style="margin-top:0" onclick="$(\'f-foto-arch\').click()">📎 Adjuntar foto</button></div></div>'+
+    '<input id="f-foto-cam" type="file" accept="image/*" capture="environment" class="oculto" onchange="leerFoto(this)">'+
+    '<input id="f-foto-arch" type="file" accept="image/*" class="oculto" onchange="leerFoto(this)">'+
+    '<div class="muted" style="margin-top:6px">Puedes tomarla en este momento o elegir una que ya tengas en el celular o la computadora.</div>'+
     '<img id="f-prev" class="foto fotoprev'+(fotoNueva?'':' oculto')+'" src="'+(fotoNueva||'')+'" alt="Vista previa">'+
     '<h3>Resguardo</h3>'+resgHTML+
     '<button class="btn pri" onclick="'+(editar?'guardarEdicion()':'revisarAlta()')+'">'+(editar?'Guardar cambios':'Continuar')+'</button>'+
@@ -384,6 +413,7 @@ function revisarAlta(){
   var o=leerCampos(['resguardatario','area','fechaResguardo']);
   if(!o.desc) return mostrarErr('ferr','Falta el nombre del equipo.');
   if(!o.serie) return mostrarErr('ferr','Falta el número de serie (si no tiene, escribe S/N).');
+  if(!o.ubicacion) return mostrarErr('ferr','Falta la ubicación.');
   if(!o.resguardatario) return mostrarErr('ferr','Falta el resguardatario.');
   if(!o.area) return mostrarErr('ferr','Falta el área.');
   if(!o.fechaResguardo) return mostrarErr('ferr','Falta la fecha de asignación.');
@@ -414,6 +444,7 @@ function confirmarAlta(){
 function guardarEdicion(){
   var o=leerCampos();
   if(!o.desc) return mostrarErr('ferr','Falta el nombre del equipo.');
+  if(!o.ubicacion) return mostrarErr('ferr','Falta la ubicación.');
   if(!o.serie) return mostrarErr('ferr','Falta el número de serie (si no tiene, escribe S/N).');
   var foto=fotoNueva, id=bien.id;
   guardarEnInventario(function(arr){
@@ -435,8 +466,8 @@ function cambiarResguardo(){
     '<label>Fecha del cambio <span class="req">*</span></label><input id="c-fecha" type="date" value="'+hoy()+'">'+
     (b.resguardatario?'<label>Motivo por el que termina su resguardo <span class="req">*</span></label><select id="c-motivo"><option value="">Selecciona…</option>'+opciones(MOTIVOS,'')+'</select>'+
       '<label>Nota (opcional)</label><input id="c-nota" placeholder="Ej. Última fecha laboral, área destino…">':'')+
-    '<label>Nuevo resguardatario <span class="req">*</span></label><input id="c-nombre" list="dl-resg" placeholder="Nombre completo">'+datalist('dl-resg','resguardatario')+
-    '<label>Área <span class="req">*</span></label><input id="c-area" list="dl-area" value="'+esc(b.area)+'">'+datalist('dl-area','area')+
+    '<label>Nuevo resguardatario <span class="req">*</span></label><input id="c-nombre" list="dl-resg" placeholder="Nombre completo" oninput="autoArea(\'c-nombre\',\'c-area\')">'+datalist('dl-resg','resguardatario')+
+    '<label>Área <span class="req">*</span></label><input id="c-area" list="dl-area" value="" placeholder="Se llena sola si la persona es del equipo" oninput="this.dataset.auto=\'\'">'+datalist('dl-area','area')+
     '<p class="muted">El resguardo anterior no se borra: queda en el historial con sus fechas.</p>'+
     '<button class="btn pri" id="btnGuardar" onclick="guardarCambioResguardo()">Guardar cambio</button>'+
     '<button class="btn gray" onclick="decidir()">Cancelar</button><div class="err" id="ferr"></div></div>');
@@ -514,7 +545,7 @@ function imprimirFicha(){
       '<div class="pf-sec">Historial de resguardo</div><table class="pf-tab"><tr><th>#</th><th>Resguardatario</th><th>Área</th><th>Desde</th><th>Hasta</th><th>Motivo de término</th></tr>'+histRows+'</table>'+
       '<p style="font-size:9pt;margin-top:10px">El resguardatario se compromete a hacer buen uso del bien descrito, a conservarlo en buen estado y a devolverlo cuando le sea requerido o al terminar su relación laboral con la empresa.</p>'+
       '<div class="pf-firmas"><div>Entrega<br><b>Administración y Control Interno</b></div><div>Recibe<br><b>'+esc(b.resguardatario||'')+'</b></div></div>'+
-      '<div class="pf-pie"><span>cosmos.ai · Activo fijo '+esc(FOLIO)+'</span><span>Impreso el '+fechaTxt(hoy())+' por '+esc(usuarioNombre)+'</span></div>';
+      '<div class="pf-pie"><span>cosmos.ai · PRONOSTICO Y ESTRATEGIA S.A. DE C.V.</span><span>Activo fijo '+esc(FOLIO)+'</span><span>Impreso el '+fechaTxt(hoy())+' por '+esc(usuarioNombre)+'</span></div>';
     pintarCodigos('pf-qr','pf-bc',96);
     setTimeout(function(){ window.print(); }, 400);
   }
