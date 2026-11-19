@@ -4690,11 +4690,11 @@ function verFichaHW(id){
     ${sec('Resguardo actual')}${tab(fila('Resguardatario',h.resguardatario||'Sin asignar')+fila('Área',areaAct)+fila('Desde',act?_hwFechaTxt(act.desde):'—'))}
     ${sec('Historial de resguardo')}<table style="width:100%;border-collapse:collapse;font-size:12px"><tr>${th('#')}${th('Resguardatario')}${th('Área')}${th('Desde')}${th('Hasta')}${th('Motivo de término')}</tr>${histRows}</table>
     <p style="font-size:11.5px;margin-top:10px">El resguardatario se compromete a hacer buen uso del bien descrito, a conservarlo en buen estado y a devolverlo cuando le sea requerido o al terminar su relación laboral con la empresa.</p>
-    <div style="display:flex;gap:30px;margin-top:60px">
+    <div style="display:flex;gap:30px;margin-top:48px;break-inside:avoid">
       <div style="flex:1;text-align:center;font-size:12px;border-top:1px solid #111;padding-top:5px">Entrega<br><b>Administración y Control Interno</b></div>
       <div style="flex:1;text-align:center;font-size:12px;border-top:1px solid #111;padding-top:5px">Recibe<br><b>${esc(h.resguardatario||'')}</b></div>
     </div>
-    <div style="margin-top:26px;font-size:10px;color:#666;border-top:1px solid #ccc;padding-top:5px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
+    <div style="margin-top:18px;break-inside:avoid;font-size:10px;color:#666;border-top:1px solid #ccc;padding-top:5px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
       <span>cosmos.ai · PRONOSTICO Y ESTRATEGIA S.A. DE C.V.</span><span>Activo fijo ${esc(folioQR||h.inv)}</span><span>Generado el ${fecha}</span>
     </div>
   </div>`;

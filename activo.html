@@ -72,19 +72,19 @@ textarea{min-height:64px;resize:vertical}
 .pf-top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #02255d;padding-bottom:8px}
 .pf-top img{height:44px}
 .pf-tit{text-align:right} .pf-tit .t{font-size:15pt;font-weight:700;color:#02255d} .pf-tit .s{font-size:9pt;color:#555}
-.pf-folio{display:flex;justify-content:space-between;align-items:center;margin:12px 0}
+.pf-folio{display:flex;justify-content:space-between;align-items:center;margin:8px 0}
 .pf-folio .f{font-family:Consolas,monospace;font-size:20pt;font-weight:700;color:#02255d}
 .pf-folio .c{font-size:10pt;color:#444}
 .pf-sec{font-size:10pt;font-weight:700;color:#fff;background:#02255d;padding:4px 8px;margin:12px 0 0;text-transform:uppercase;letter-spacing:.5px}
 .pf-tab{width:100%;border-collapse:collapse;font-size:9.5pt}
-.pf-tab td,.pf-tab th{border:1px solid #bbb;padding:5px 7px;vertical-align:top;text-align:left}
+.pf-tab td,.pf-tab th{border:1px solid #bbb;padding:4px 7px;vertical-align:top;text-align:left}
 .pf-tab th{background:#E9EDF4;color:#02255d;font-weight:700}
 .pf-tab td.e{background:#F4F5F8;color:#555;width:24%;font-weight:700}
 .pf-codigos{display:flex;align-items:center;gap:12px} .pf-bc svg,.pf-bc img{height:16mm;width:auto;display:block}
-.pf-foto{max-height:60mm;max-width:80mm;border:1px solid #bbb;margin-top:6px}
-.pf-firmas{display:flex;gap:30px;margin-top:22mm}
+.pf-foto{max-height:45mm;max-width:70mm;border:1px solid #bbb;margin-top:6px}
+.pf-firmas{display:flex;gap:30px;margin-top:14mm;break-inside:avoid}
 .pf-firmas div{flex:1;text-align:center;font-size:9.5pt;border-top:1px solid #111;padding-top:5px}
-.pf-pie{margin-top:10mm;font-size:8pt;color:#666;border-top:1px solid #ccc;padding-top:5px;display:flex;justify-content:space-between}
+.pf-pie{margin-top:5mm;break-inside:avoid;font-size:8pt;color:#666;border-top:1px solid #ccc;padding-top:5px;display:flex;justify-content:space-between}
 </style>
 </head>
 <body>
@@ -318,6 +318,7 @@ function verFicha(msgOk){
 function sinRegistro(){
   vista('<div class="card">'+encabezadoFolio()+
     '<div class="aviso">Esta etiqueta todavía no está asignada a ningún bien.</div>'+bloqueCodigos()+
+    (FOLIO===FOLIO_EJEMPLO?'<button class="btn pri" onclick="cargarEjemplo()">📦 Cargar ficha de ejemplo</button><p class="muted">Etiqueta de demostración: crea un bien de ejemplo ya lleno, con historial, para mostrar cómo se ve.</p>':'')+
     '<button class="btn pri" onclick="formulario(false)">➕ Registrar un bien nuevo</button>'+
     '<button class="btn sec" onclick="ligarExistente()">🔗 Ligar a un bien ya registrado</button>'+
     '<p class="muted" style="margin-top:12px">Usa "Ligar" cuando el equipo ya está en el sistema con otro número (por ejemplo cosmos_Eq_001) y solo le vas a pegar esta etiqueta.</p>'+
@@ -352,6 +353,26 @@ function confirmarLigar(id){
     if(arr.some(function(x){ return x && x.etiqueta===FOLIO; })) return 'Esta etiqueta ya fue asignada a otro bien.';
     arr[i].etiqueta=FOLIO; arr[i].etiquetaAsignada={por:usuarioNombre, fecha:hoy()};
   }, 'Etiqueta ligada a '+h.inv+'. Revisa que tenga resguardatario y área.');
+}
+
+// ─── Ficha de ejemplo para demostraciones (solo etiqueta ME-0000000000) ─────
+var FOLIO_EJEMPLO = 'ME-0000000000';
+function cargarEjemplo(){
+  if(FOLIO!==FOLIO_EJEMPLO) return;
+  if(!confirm('¿Crear la ficha de ejemplo para la etiqueta '+FOLIO+'? Después la puedes borrar desde la pestaña Hardware.')) return;
+  guardarEnInventario(function(arr){
+    if(arr.some(function(x){ return x && (x.etiqueta===FOLIO || x.inv===FOLIO); })) return 'La ficha de ejemplo ya existe.';
+    arr.push({id:Date.now(), inv:FOLIO, etiqueta:FOLIO, documentos:[], ejemplo:true, altaPorQR:{por:usuarioNombre, fecha:hoy()},
+      desc:'Silla ejecutiva ergonómica', clasif:'Mobiliario y equipo de oficina', serie:'SE-2026-0457', marca:'Ofiplus', modelo:'Ergo Pro',
+      color:'Negro', estado:'Bueno', ubicacion:'Oficina Toluca, piso 2, Dirección General', fecha:'2026-02-10', factura:'F-10234', proveedor:'Ofiplus México',
+      especif:'Respaldo de malla, soporte lumbar, descansabrazos ajustables', obs:'BIEN DE EJEMPLO para demostración del sistema',
+      resguardatario:'Emilio Guerra-Estévez', area:'Dirección General', fechaResguardo:'2026-09-01',
+      historialResguardo:[
+        {accion:'Asignado', nombre:'Israel Vázquez Hernández', area:'Legal', fecha:'2026-02-10', notas:'Alta del bien', por:usuarioNombre, registrado:hoy()},
+        {accion:'Liberado', nombre:'Israel Vázquez Hernández', area:'Legal', fecha:'2026-08-31', motivo:'Reasignación de equipo', notas:'Se le asignó otra silla', por:usuarioNombre, registrado:hoy()},
+        {accion:'Asignado', nombre:'Emilio Guerra-Estévez', area:'Dirección General', fecha:'2026-09-01', notas:'', por:usuarioNombre, registrado:hoy()}
+      ]});
+  }, 'Ficha de ejemplo creada. Ya se puede escanear para verla.');
 }
 
 // ─── Formulario de alta / edición ────────────────────────────────────────────
